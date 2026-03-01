@@ -17,11 +17,12 @@ class SupabaseService {
         this.client = sb;
     }
 
-    async getInsects() {
-        if (!this.client) return [];
+    async getInsects(userId) {
+        if (!this.client || !userId) return [];
         const { data, error } = await this.client
             .from('insects')
             .select('*')
+            .eq('user_id', userId)
             .order('date_added', { ascending: false });
 
         if (error) {
@@ -191,12 +192,12 @@ class AlbumManager {
             if (this.isUniversalMode) {
                 this.album = await this.db.getAllInsects();
             } else {
-                this.album = await this.db.getInsects();
+                this.album = await this.db.getInsects(this.currentUser.id);
                 // Check for local migration
                 const localData = JSON.parse(localStorage.getItem('insect-album')) || [];
                 if (localData.length > 0 && this.album.length === 0) {
                     await this.db.addInsects(localData, this.currentUser.id);
-                    this.album = await this.db.getInsects();
+                    this.album = await this.db.getInsects(this.currentUser.id);
                 }
             }
         } else {
