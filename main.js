@@ -137,6 +137,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewName = document.getElementById('selected-insect-name');
     const confirmBtn = document.getElementById('confirm-add-btn');
 
+    // Viewer Elements
+    const viewerModal = document.getElementById('viewer-modal');
+    const viewerImg = document.getElementById('viewer-image');
+    const viewerName = document.getElementById('viewer-name');
+    const closeViewerBtn = document.querySelector('.close-viewer-btn');
+
     let selectedInsects = []; // Array of {name, imageUrl}
 
     // Initial render
@@ -168,6 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeBtn.addEventListener('click', closeModal);
     document.querySelector('.modal-overlay').addEventListener('click', closeModal);
+
+    // Viewer control
+    const closeViewer = () => {
+        viewerModal.classList.add('hidden');
+    };
+
+    closeViewerBtn.addEventListener('click', closeViewer);
+    viewerModal.querySelector('.modal-overlay').addEventListener('click', closeViewer);
 
     const updatePreview = () => {
         if (selectedInsects.length === 0) {
