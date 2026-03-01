@@ -42,7 +42,7 @@ class SupabaseService {
         // Fetch insects joined with profiles to get framing and icon info
         const { data, error } = await this.client
             .from('insects')
-            .select('*, profiles(id, email, frame_type, frame_value, avatar_url)')
+            .select('*, profiles:user_id(id, username, frame_type, frame_value, avatar_url)')
             .order('date_added', { ascending: false });
 
         if (error) {
@@ -55,7 +55,7 @@ class SupabaseService {
             imageUrl: item.image_url,
             dateAdded: item.date_added,
             userId: item.user_id,
-            userName: item.profiles?.email || 'Unknown User',
+            userName: item.profiles?.username || 'Unknown User',
             frameType: item.profiles?.frame_type || 'color',
             frameValue: item.profiles?.frame_value || '#4ade80',
             avatarUrl: item.profiles?.avatar_url
@@ -251,13 +251,13 @@ class AlbumManager {
         this.gridElement.innerHTML = this.album.map(insect => {
             const frameValue = this.isUniversalMode ? (insect.frameValue || '#4ade80') : (this.userProfile?.frame_value || '#4ade80');
             const avatarUrl = this.isUniversalMode ? insect.avatarUrl : this.userProfile?.avatar_url;
-            const userName = this.isUniversalMode ? insect.userName : (this.currentUser?.email || 'U');
+            const userName = this.isUniversalMode ? (insect.userName || 'Anonymous') : (this.userProfile?.username || this.currentUser?.email || 'User');
 
             const frameStyle = `border-color: ${frameValue}`;
-            const initial = userName[0].toUpperCase();
+            const initial = (userName && typeof userName === 'string' && userName.length > 0) ? userName[0].toUpperCase() : 'U';
 
             const avatarHtml = avatarUrl
-                ? `<img src="${avatarUrl}" alt="${userName}">`
+                ? `<img src="${avatarUrl}" alt="${userName}" onerror="this.parentElement.innerHTML='<span>${initial}</span>'">`
                 : `<span>${initial}</span>`;
 
             return `
