@@ -219,6 +219,14 @@ const RARE_INSECTS = [
 
 // UI Controller
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize Supabase if possible
+    console.log('Initializing Album de Insectos...');
+    if (initSupabase()) {
+        console.log('Supabase initialized successfully.');
+    } else {
+        console.warn('Supabase not initialized. Check config.js and Supabase library.');
+    }
+
     const db = new SupabaseService();
     const albumManager = new AlbumManager(db);
     const searchService = new WikipediaSearch();
