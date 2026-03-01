@@ -106,16 +106,14 @@ class WikipediaSearch {
 }
 
 const RARE_INSECTS = [
-    "Orchid Mantis",
-    "Venezuela Poodle Moth",
-    "Goliath Beetle",
-    "Atlas Moth",
-    "Peacock Spider",
-    "Jewel Wasp",
-    "Thorny Devil Stick Insect",
-    "Giraffe Weevil",
-    "Leaf-Insects",
-    "Picasso Bug"
+    "Orchid Mantis", "Venezuela Poodle Moth", "Goliath Beetle", "Atlas Moth",
+    "Peacock Spider", "Jewel Wasp", "Thorny Devil Stick Insect", "Giraffe Weevil",
+    "Leaf-Insects", "Picasso Bug", "Assassins Bug", "Spiny Flower Mantis",
+    "Dragonfly", "Hercules Beetle", "Luna Moth", "Rosy Maple Moth",
+    "Boll Weevil", "Stink Bug", "Shield Bug", "Lantern Fly",
+    "Cicada", "Katydid", "Walking Stick", "Praying Mantis",
+    "Ladybug", "Firefly", "Scorpion Fly", "Lacewing",
+    "Antlion", "Wasp Moth", "Hummingbird Hawk-Moth", "Glasswing Butterfly"
 ];
 
 // UI Controller
@@ -144,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeViewerBtn = document.querySelector('.close-viewer-btn');
 
     let selectedInsects = []; // Array of {name, imageUrl}
+    let lastSurprise = null;
 
     // Initial render
     albumManager.render();
@@ -156,7 +155,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     surpriseBtn.addEventListener('click', async () => {
-        const randomInsect = RARE_INSECTS[Math.floor(Math.random() * RARE_INSECTS.length)];
+        // Filter out insects already in the album or the last surprise
+        const albumNames = albumManager.album.map(ins => ins.name.toLowerCase());
+        const candidates = RARE_INSECTS.filter(name =>
+            !albumNames.includes(name.toLowerCase()) && name !== lastSurprise
+        );
+
+        // Fallback to full list if all are in album
+        const sourceList = candidates.length > 0 ? candidates : RARE_INSECTS.filter(n => n !== lastSurprise);
+        const randomInsect = sourceList[Math.floor(Math.random() * sourceList.length)];
+
+        lastSurprise = randomInsect;
         modalTitle.textContent = `Discovering: ${randomInsect}`;
         modal.classList.remove('hidden');
         searchInput.value = randomInsect;
