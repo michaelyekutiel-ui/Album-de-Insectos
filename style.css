@@ -746,9 +746,9 @@ input[type="text"]:focus {
 
 /* User Icon / Avatar Styles */
 .user-avatar-badge {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 75px;
+    height: 75px;
+    border-radius: 18px;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid var(--glass-border);
@@ -767,7 +767,7 @@ input[type="text"]:focus {
 
 .user-avatar-badge span {
     font-weight: 600;
-    font-size: 1.2rem;
+    font-size: 2rem;
     color: var(--accent-color);
 }
 
@@ -797,9 +797,9 @@ input[type="text"]:focus {
 }
 
 .user-avatar-small {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 68px;
+    height: 68px;
+    border-radius: 16px;
     background: var(--bg-color);
     border: 2px solid var(--accent-color);
     display: flex;
