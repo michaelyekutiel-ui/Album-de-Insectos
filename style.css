@@ -27,8 +27,11 @@ body {
 }
 
 header {
-    padding: 3rem 2rem;
-    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    padding: 1.5rem 1rem;
+    transition: var(--transition);
 }
 
 h1 {
@@ -379,6 +382,23 @@ input[type="text"]:focus {
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
+}
+
+.glass-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    transition: var(--transition);
+}
+
+.glass-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Viewer Specific Styles */

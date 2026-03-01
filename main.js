@@ -2,11 +2,15 @@
  * Album de Insectos - Core Logic
  */
 
-// Initialize Supabase Client (only if config is provided)
+// Initialize Supabase Client
 let sb = null;
-if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.url !== "YOUR_SUPABASE_URL") {
-    sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
-}
+const initSupabase = () => {
+    if (typeof supabase !== 'undefined' && typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.url !== "YOUR_SUPABASE_URL") {
+        sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+        return true;
+    }
+    return false;
+};
 
 class SupabaseService {
     constructor() {
@@ -277,20 +281,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Auth Interactions
-    authBtn.onclick = () => authModal.classList.remove('hidden');
-    closeAuthBtn.onclick = () => authModal.classList.add('hidden');
+    authBtn.addEventListener('click', () => {
+        authModal.classList.remove('hidden');
+    });
 
-    switchAuthLink.onclick = (e) => {
+    closeAuthBtn.addEventListener('click', () => {
+        authModal.classList.add('hidden');
+    });
+
+    switchAuthLink.addEventListener('click', (e) => {
         e.preventDefault();
         isLogin = !isLogin;
         authTitle.textContent = isLogin ? 'Sign In' : 'Sign Up';
         authSubmitBtn.textContent = isLogin ? 'Sign In' : 'Sign Up';
         switchAuthLink.textContent = isLogin ? 'Sign Up' : 'Sign In';
-        document.querySelector('.auth-switch').childNodes[0].textContent = isLogin ? "Don't have an account? " : "Already have an account? ";
-    };
+        const switchText = isLogin ? "Don't have an account? " : "Already have an account? ";
+        document.querySelector('.auth-switch').childNodes[0].textContent = switchText;
+    });
 
-    authForm.onsubmit = async (e) => {
+    authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!sb) {
+            alert('Cloud sync is not configured. Please check config.js or try refreshing.');
+            return;
+        }
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         authSubmitBtn.disabled = true;
@@ -311,16 +325,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             authModal.classList.add('hidden');
             authForm.reset();
         } catch (error) {
-            alert(error.message);
+            console.error('Auth Error:', error);
+            const msg = error.message || 'Unknown network error';
+            if (msg === 'Failed to fetch') {
+                alert('Connection Error: Your phone or network is blocking the connection to Supabase. Check your internet or ad-blocker.');
+            } else {
+                alert(`Error: ${msg}`);
+            }
         } finally {
             authSubmitBtn.disabled = false;
             authSubmitBtn.textContent = isLogin ? 'Sign In' : 'Sign Up';
         }
-    };
+    });
 
-    logoutBtn.onclick = async () => {
-        await sb.auth.signOut();
-    };
+    logoutBtn.addEventListener('click', async () => {
+        if (sb) await sb.auth.signOut();
+    });
 
     // Original Album Logic
     albumManager.render();
@@ -402,13 +422,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    searchBtn.onclick = () => performSearch();
-    confirmBtn.onclick = () => {
+    searchBtn.addEventListener('click', () => performSearch());
+    confirmBtn.addEventListener('click', () => {
         if (selectedInsects.length > 0) {
             albumManager.addInsects(selectedInsects);
             closeModal();
         }
-    };
+    });
 
     document.getElementById('album-grid').onclick = (e) => {
         const deleteBtn = e.target.closest('.delete-card-btn');
