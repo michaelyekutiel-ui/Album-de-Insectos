@@ -43,7 +43,7 @@ class SupabaseService {
         // Fetch insects joined with profiles to get framing and icon info
         const { data, error } = await this.client
             .from('insects')
-            .select('*, profiles:user_id(id, username, frame_type, frame_value, avatar_url)')
+            .select('*, profiles:user_id!inner(id, username, frame_type, frame_value, avatar_url)')
             .order('date_added', { ascending: false });
 
         if (error) {
@@ -113,8 +113,8 @@ class SupabaseService {
     async uploadAvatar(userId, file) {
         if (!this.client) return null;
         const fileExt = file.name.split('.').pop();
-        const fileName = `${userId}-${Math.random()}.${fileExt}`;
-        const filePath = `avatars/${fileName}`;
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`; // Folder is userId, filename is random
 
         const { error: uploadError } = await this.client.storage
             .from('avatars')
@@ -173,6 +173,11 @@ class AlbumManager {
         this.currentUser = user;
         if (user) {
             this.userProfile = await this.db.getProfile(user.id);
+            // Auto-create profile if missing
+            if (!this.userProfile) {
+                await this.db.updateProfile(user.id, { username: user.email.split('@')[0] });
+                this.userProfile = await this.db.getProfile(user.id);
+            }
             await this.refreshAlbum();
         } else {
             this.userProfile = null;
@@ -521,7 +526,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Framing Selection Logic
     frameSettingsBtn.addEventListener('click', () => {
-        if (!albumManager.userProfile) return;
+        if (!albumManager.currentUser) {
+            authBtn.click();
+            return;
+        }
 
         pendingFrameValue = albumManager.userProfile.frame_value || '#4ade80';
         pendingAvatarUrl = albumManager.userProfile.avatar_url;
