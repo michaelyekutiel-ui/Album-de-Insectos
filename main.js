@@ -2,33 +2,121 @@
  * Album de Insectos - Core Logic
  */
 
-class AlbumManager {
+// Initialize Supabase Client (only if config is provided)
+let supabase = null;
+if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.url !== "YOUR_SUPABASE_URL") {
+    supabase = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+}
+
+class SupabaseService {
     constructor() {
-        this.album = JSON.parse(localStorage.getItem('insect-album')) || [];
-        this.gridElement = document.getElementById('album-grid');
+        this.client = supabase;
     }
 
-    save() {
-        localStorage.setItem('insect-album', JSON.stringify(this.album));
-    }
+    async getInsects() {
+        if (!this.client) return [];
+        const { data, error } = await this.client
+            .from('insects')
+            .select('*')
+            .order('date_added', { ascending: false });
 
-    addInsects(insects) {
-        // insects is an array of {name, imageUrl}
-        const newItems = insects.map(item => ({
-            id: Date.now() + Math.random(), // Unique ID even for batch
+        if (error) {
+            console.error('Error fetching insects:', error);
+            return [];
+        }
+        return data.map(item => ({
+            id: item.id,
             name: item.name,
-            imageUrl: item.imageUrl,
-            dateAdded: new Date().toISOString()
+            imageUrl: item.image_url,
+            dateAdded: item.date_added
+        }));
+    }
+
+    async addInsects(insects, userId) {
+        if (!this.client) return;
+        const toInsert = insects.map(ins => ({
+            user_id: userId,
+            name: ins.name,
+            image_url: ins.imageUrl,
+            date_added: new Date().toISOString()
         }));
 
-        this.album = [...newItems, ...this.album];
-        this.save();
+        const { error } = await this.client
+            .from('insects')
+            .insert(toInsert);
+
+        if (error) console.error('Error saving insects:', error);
+    }
+
+    async deleteInsect(id) {
+        if (!this.client) return;
+        const { error } = await this.client
+            .from('insects')
+            .delete()
+            .eq('id', id);
+
+        if (error) console.error('Error deleting insect:', error);
+    }
+}
+
+class AlbumManager {
+    constructor(supabaseService) {
+        this.db = supabaseService;
+        this.album = JSON.parse(localStorage.getItem('insect-album')) || [];
+        this.gridElement = document.getElementById('album-grid');
+        this.currentUser = null;
+    }
+
+    async setUser(user) {
+        this.currentUser = user;
+        if (user) {
+            // Fetch from Supabase and merge with local? 
+            // For now, let's just replace with cloud data if logged in
+            const cloudAlbum = await this.db.getInsects();
+            if (cloudAlbum.length > 0 || this.album.length > 0) {
+                // If local has data but cloud is empty, maybe sync up?
+                if (cloudAlbum.length === 0 && this.album.length > 0) {
+                    await this.db.addInsects(this.album, user.id);
+                    this.album = await this.db.getInsects();
+                } else {
+                    this.album = cloudAlbum;
+                }
+            }
+        } else {
+            this.album = JSON.parse(localStorage.getItem('insect-album')) || [];
+        }
         this.render();
     }
 
-    deleteInsect(id) {
-        this.album = this.album.filter(insect => insect.id !== id);
-        this.save();
+    saveLocal() {
+        localStorage.setItem('insect-album', JSON.stringify(this.album));
+    }
+
+    async addInsects(insects) {
+        if (this.currentUser) {
+            await this.db.addInsects(insects, this.currentUser.id);
+            this.album = await this.db.getInsects();
+        } else {
+            const newItems = insects.map(item => ({
+                id: Date.now() + Math.random(),
+                name: item.name,
+                imageUrl: item.imageUrl,
+                dateAdded: new Date().toISOString()
+            }));
+            this.album = [...newItems, ...this.album];
+            this.saveLocal();
+        }
+        this.render();
+    }
+
+    async deleteInsect(id) {
+        if (this.currentUser) {
+            await this.db.deleteInsect(id);
+            this.album = await this.db.getInsects();
+        } else {
+            this.album = this.album.filter(insect => insect.id !== id);
+            this.saveLocal();
+        }
         this.render();
     }
 
@@ -61,23 +149,20 @@ class WikipediaSearch {
     }
 
     async search(query) {
-        // Step 1: Search for files related to the query
         const params = new URLSearchParams({
             action: 'query',
             format: 'json',
             list: 'search',
             srsearch: `${query} insect filetype:bitmap`,
-            srnamespace: '6', // File namespace
+            srnamespace: '6',
             origin: '*'
         });
 
         try {
             const response = await fetch(`${this.baseUrl}?${params}`);
             const data = await response.json();
-
             if (!data.query || !data.query.search) return [];
 
-            // Step 2: Get image URLs for the search results
             const titles = data.query.search.map(result => result.title).join('|');
             if (!titles) return [];
 
@@ -129,11 +214,23 @@ const RARE_INSECTS = [
 ];
 
 // UI Controller
-document.addEventListener('DOMContentLoaded', () => {
-    const albumManager = new AlbumManager();
+document.addEventListener('DOMContentLoaded', async () => {
+    const db = new SupabaseService();
+    const albumManager = new AlbumManager(db);
     const searchService = new WikipediaSearch();
 
-    // Elements
+    // UI Elements
+    const authBtn = document.getElementById('auth-btn');
+    const authModal = document.getElementById('auth-modal');
+    const authForm = document.getElementById('auth-form');
+    const authTitle = document.getElementById('auth-modal-title');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const switchAuthLink = document.getElementById('switch-auth-link');
+    const closeAuthBtn = document.querySelector('.close-auth-btn');
+    const userInfo = document.getElementById('user-info');
+    const userEmail = document.getElementById('user-email');
+    const logoutBtn = document.getElementById('logout-btn');
+
     const addBtn = document.getElementById('add-insect-btn');
     const surpriseBtn = document.getElementById('surprise-btn');
     const modal = document.getElementById('search-modal');
@@ -147,19 +244,87 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewName = document.getElementById('selected-insect-name');
     const confirmBtn = document.getElementById('confirm-add-btn');
 
-    // Viewer Elements
     const viewerModal = document.getElementById('viewer-modal');
     const viewerImg = document.getElementById('viewer-image');
     const viewerName = document.getElementById('viewer-name');
     const closeViewerBtn = document.querySelector('.close-viewer-btn');
 
-    let selectedInsects = []; // Array of {name, imageUrl}
+    let isLogin = true;
+    let selectedInsects = [];
     let lastSurprise = null;
 
-    // Initial render
+    // Supabase Auth State Listener
+    if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        handleAuthStateChange(session?.user || null);
+
+        supabase.auth.onAuthStateChange((_event, session) => {
+            handleAuthStateChange(session?.user || null);
+        });
+    }
+
+    function handleAuthStateChange(user) {
+        if (user) {
+            authBtn.classList.add('hidden');
+            userInfo.classList.remove('hidden');
+            userEmail.textContent = user.email;
+            albumManager.setUser(user);
+        } else {
+            authBtn.classList.remove('hidden');
+            userInfo.classList.add('hidden');
+            albumManager.setUser(null);
+        }
+    }
+
+    // Auth Interactions
+    authBtn.onclick = () => authModal.classList.remove('hidden');
+    closeAuthBtn.onclick = () => authModal.classList.add('hidden');
+
+    switchAuthLink.onclick = (e) => {
+        e.preventDefault();
+        isLogin = !isLogin;
+        authTitle.textContent = isLogin ? 'Sign In' : 'Sign Up';
+        authSubmitBtn.textContent = isLogin ? 'Sign In' : 'Sign Up';
+        switchAuthLink.textContent = isLogin ? 'Sign Up' : 'Sign In';
+        document.querySelector('.auth-switch').childNodes[0].textContent = isLogin ? "Don't have an account? " : "Already have an account? ";
+    };
+
+    authForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        authSubmitBtn.disabled = true;
+        authSubmitBtn.textContent = isLogin ? 'Signing In...' : 'Signing Up...';
+
+        try {
+            let result;
+            if (isLogin) {
+                result = await supabase.auth.signInWithPassword({ email, password });
+            } else {
+                result = await supabase.auth.signUp({ email, password });
+                if (result.data?.user && !result.data.session) {
+                    alert('Check your email for the confirmation link!');
+                }
+            }
+
+            if (result.error) throw result.error;
+            authModal.classList.add('hidden');
+            authForm.reset();
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            authSubmitBtn.disabled = false;
+            authSubmitBtn.textContent = isLogin ? 'Sign In' : 'Sign Up';
+        }
+    };
+
+    logoutBtn.onclick = async () => {
+        await supabase.auth.signOut();
+    };
+
+    // Original Album Logic
     albumManager.render();
 
-    // Modal control
     addBtn.addEventListener('click', () => {
         modalTitle.textContent = 'Add New Insect';
         modal.classList.remove('hidden');
@@ -167,16 +332,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     surpriseBtn.addEventListener('click', async () => {
-        // Filter out insects already in the album or the last surprise
         const albumNames = albumManager.album.map(ins => ins.name.toLowerCase());
-        const candidates = RARE_INSECTS.filter(name =>
-            !albumNames.includes(name.toLowerCase()) && name !== lastSurprise
-        );
-
-        // Fallback to full list if all are in album
+        const candidates = RARE_INSECTS.filter(name => !albumNames.includes(name.toLowerCase()) && name !== lastSurprise);
         const sourceList = candidates.length > 0 ? candidates : RARE_INSECTS.filter(n => n !== lastSurprise);
         const randomInsect = sourceList[Math.floor(Math.random() * sourceList.length)];
-
         lastSurprise = randomInsect;
         modalTitle.textContent = `Discovering: ${randomInsect}`;
         modal.classList.remove('hidden');
@@ -194,70 +353,45 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     closeBtn.addEventListener('click', closeModal);
-    document.querySelector('.modal-overlay').addEventListener('click', closeModal);
 
-    // Viewer control
-    const closeViewer = () => {
-        viewerModal.classList.add('hidden');
-    };
-
+    const closeViewer = () => viewerModal.classList.add('hidden');
     closeViewerBtn.addEventListener('click', closeViewer);
-    viewerModal.querySelector('.modal-overlay').addEventListener('click', closeViewer);
 
     const updatePreview = () => {
         if (selectedInsects.length === 0) {
             previewArea.classList.add('hidden');
             return;
         }
-
         previewArea.classList.remove('hidden');
-        previewContainer.innerHTML = selectedInsects.map(ins => `
-            <img src="${ins.imageUrl}" class="preview-thumb" alt="Selected">
-        `).join('');
-
-        previewName.textContent = selectedInsects.length === 1
-            ? `Add "${selectedInsects[0].name}" to your album?`
-            : `Add ${selectedInsects.length} insects to your album?`;
+        previewContainer.innerHTML = selectedInsects.map(ins => `<img src="${ins.imageUrl}" class="preview-thumb" alt="Selected">`).join('');
+        previewName.textContent = selectedInsects.length === 1 ? `Add "${selectedInsects[0].name}" to your album?` : `Add ${selectedInsects.length} insects to your album?`;
     };
 
-    // Search logic
     const performSearch = async (overrideQuery) => {
         const query = overrideQuery || searchInput.value.trim();
         if (!query) return;
-
         searchBtn.textContent = 'Searching...';
         searchBtn.disabled = true;
         resultsGrid.innerHTML = '<div class="loading">Searching Wikimedia Commons...</div>';
-        // Don't hide preview if we're doing a new search, just keep current selections
-        // previewArea.classList.add('hidden'); 
-
         const images = await searchService.search(query);
-
         searchBtn.textContent = 'Search';
         searchBtn.disabled = false;
         resultsGrid.innerHTML = '';
-
         if (images.length === 0) {
             resultsGrid.innerHTML = '<p>No images found. Try a different name.</p>';
             return;
         }
-
         images.forEach(url => {
             const div = document.createElement('div');
             div.className = 'result-item';
-            if (selectedInsects.some(ins => ins.imageUrl === url)) {
-                div.classList.add('selected');
-            }
+            if (selectedInsects.some(ins => ins.imageUrl === url)) div.classList.add('selected');
             div.innerHTML = `<img src="${url}" alt="Insect candidate">`;
-
             div.onclick = () => {
                 const index = selectedInsects.findIndex(ins => ins.imageUrl === url);
                 if (index > -1) {
                     selectedInsects.splice(index, 1);
                     div.classList.add('unselecting');
-                    setTimeout(() => {
-                        div.classList.remove('selected', 'unselecting');
-                    }, 300);
+                    setTimeout(() => div.classList.remove('selected', 'unselecting'), 300);
                 } else {
                     selectedInsects.push({ name: query, imageUrl: url });
                     div.classList.add('selected');
@@ -268,41 +402,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    searchBtn.addEventListener('click', () => performSearch());
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') performSearch();
-    });
-
-    // Confirm add
-    confirmBtn.addEventListener('click', () => {
+    searchBtn.onclick = () => performSearch();
+    confirmBtn.onclick = () => {
         if (selectedInsects.length > 0) {
             albumManager.addInsects(selectedInsects);
             closeModal();
         }
-    });
+    };
 
-    // Handle clicks on the grid
-    document.getElementById('album-grid').addEventListener('click', (e) => {
+    document.getElementById('album-grid').onclick = (e) => {
         const deleteBtn = e.target.closest('.delete-card-btn');
         const card = e.target.closest('.insect-card');
-
         if (deleteBtn) {
-            const id = parseFloat(card.dataset.id);
+            const id = isNaN(card.dataset.id) ? card.dataset.id : parseFloat(card.dataset.id);
             const insectName = card.querySelector('h3').textContent;
-
             if (confirm(`Are you sure you want to remove "${insectName}" from your album?`)) {
                 albumManager.deleteInsect(id);
             }
             return;
         }
-
         if (card) {
-            const imgUrl = card.querySelector('img').src;
-            const insectName = card.querySelector('h3').textContent;
-
-            viewerImg.src = imgUrl;
-            viewerName.textContent = insectName;
+            viewerImg.src = card.querySelector('img').src;
+            viewerName.textContent = card.querySelector('h3').textContent;
             viewerModal.classList.remove('hidden');
         }
-    });
+    };
 });
