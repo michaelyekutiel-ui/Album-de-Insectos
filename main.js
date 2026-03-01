@@ -106,14 +106,26 @@ class WikipediaSearch {
 }
 
 const RARE_INSECTS = [
-    "Orchid Mantis", "Venezuela Poodle Moth", "Goliath Beetle", "Atlas Moth",
-    "Peacock Spider", "Jewel Wasp", "Thorny Devil Stick Insect", "Giraffe Weevil",
-    "Leaf-Insects", "Picasso Bug", "Assassins Bug", "Spiny Flower Mantis",
-    "Dragonfly", "Hercules Beetle", "Luna Moth", "Rosy Maple Moth",
-    "Boll Weevil", "Stink Bug", "Shield Bug", "Lantern Fly",
-    "Cicada", "Katydid", "Walking Stick", "Praying Mantis",
-    "Ladybug", "Firefly", "Scorpion Fly", "Lacewing",
-    "Antlion", "Wasp Moth", "Hummingbird Hawk-Moth", "Glasswing Butterfly"
+    "Picasso Bug", "Orchid Mantis", "Leaf Insect", "Violin Beetle", "Brazilian Treehopper",
+    "Thorn Bug", "Giraffe Weevil", "Poodle Moth", "Stalk-eyed Fly", "Hercules Beetle",
+    "Goliath Beetle", "Titan Beetle", "Giant Weta", "Atlas Moth", "Queen Alexandra's Birdwing",
+    "Venezuelan Poodle Moth", "Red Spotted Jewel Beetle", "Claudina Butterfly", "Green Milkweed Grasshopper", "Papuan Green Weevil",
+    "Wax Tailed Bug", "Leaf-Mimic Katydid", "Wandering Violin Mantis", "Darth Vader Mantis", "Dragon Mantis",
+    "Australian Walking Stick", "Hickory Horned Devil", "Puss Moth", "Elephant Hawk Moth", "Giant Long-Legged Katydid",
+    "Wheel Bug", "Alligator Bug", "Creatonotos Gangis", "Filbert Weevil", "Spiny Flower Mantis",
+    "Rosy Maple Moth", "Cuckoo Wasp", "Golden Tortoise Beetle", "Beautiful Demoiselle", "Seafoam Striped Weevil",
+    "Malay Lacewing", "Banded Jewel Beetle", "Chrysochroa fulminans nishiyamai", "Metallic green Leafhopper", "Parasitoid Wasp",
+    "Orange Oakleaf Butterfly", "Dead Leaf Mantis", "Sphinx Moth Caterpillar", "Pink Underwing Moth Caterpillar", "Dead Leaf Moth",
+    "Common Baron Caterpillar", "Bee-Like Robber Fly", "Wood Nymph Moth", "Tiger Swallowtail Butterfly", "Ghost Mantis",
+    "Jewel Beetle", "Emerald Swallowtail Butterfly", "Flame Skimmer Dragonfly", "Blue-striped Nettle Grub Caterpillar", "Monarch Butterfly",
+    "Viceroy Butterfly", "Peppered Moth", "Luna Moth", "Death's-head Hawkmoth", "Vampire Moth",
+    "Sloth Moth", "Mandolin Moth", "Monopis Moth", "Tree Lobster", "Giant Spiny Stick Insect",
+    "Jungle Nymph", "Black Beauty Stick Insect", "Giant Swallowtail Butterfly", "Firefly", "Glowing Click Beetle",
+    "Railroad Worm", "Blue Ghost Firefly", "Snow Flea", "Snow Cricket", "Polypedilum vanderplanki",
+    "Radiation-resistant Chironomidae", "Alaskan Beetle", "Antarctic Midge", "Orchid Bee", "Periodical Cicada",
+    "Pharaoh Ant", "Euryplatea Nanaknihali Fly", "Fairyfly Wasp", "Scydosella musawasensis", "Leafcutter Ant",
+    "Trap-Jaw Ant", "Bullet Ant", "Suicide Ant", "Weaver Ant", "Honeypot Ant",
+    "Dung Beetle", "Tarantula Hawk Wasp", "Ohlone Tiger Beetle", "Karner Blue Butterfly", "American Burying Beetle"
 ];
 
 // UI Controller
