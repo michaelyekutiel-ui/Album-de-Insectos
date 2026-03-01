@@ -39,10 +39,10 @@ class SupabaseService {
 
     async getAllInsects() {
         if (!this.client) return [];
-        // Fetch insects joined with profiles to get framing info
+        // Fetch insects joined with profiles to get framing and icon info
         const { data, error } = await this.client
             .from('insects')
-            .select('*, profiles(id, email, frame_type, frame_value)')
+            .select('*, profiles(id, email, frame_type, frame_value, avatar_url)')
             .order('date_added', { ascending: false });
 
         if (error) {
@@ -57,7 +57,8 @@ class SupabaseService {
             userId: item.user_id,
             userName: item.profiles?.email || 'Unknown User',
             frameType: item.profiles?.frame_type || 'color',
-            frameValue: item.profiles?.frame_value || '#4ade80'
+            frameValue: item.profiles?.frame_value || '#4ade80',
+            avatarUrl: item.profiles?.avatar_url
         }));
     }
 
@@ -103,6 +104,28 @@ class SupabaseService {
 
         const { data: { publicUrl } } = this.client.storage
             .from('frames')
+            .getPublicUrl(filePath);
+
+        return publicUrl;
+    }
+
+    async uploadAvatar(userId, file) {
+        if (!this.client) return null;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}-${Math.random()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        const { error: uploadError } = await this.client.storage
+            .from('avatars')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            console.error('Error uploading avatar:', uploadError);
+            return null;
+        }
+
+        const { data: { publicUrl } } = this.client.storage
+            .from('avatars')
             .getPublicUrl(filePath);
 
         return publicUrl;
@@ -226,29 +249,32 @@ class AlbumManager {
         }
 
         this.gridElement.innerHTML = this.album.map(insect => {
-            const frameType = this.isUniversalMode ? (insect.frameType || 'color') : (this.userProfile?.frame_type || 'color');
             const frameValue = this.isUniversalMode ? (insect.frameValue || '#4ade80') : (this.userProfile?.frame_value || '#4ade80');
+            const avatarUrl = this.isUniversalMode ? insect.avatarUrl : this.userProfile?.avatar_url;
+            const userName = this.isUniversalMode ? insect.userName : (this.currentUser?.email || 'U');
 
-            let frameStyle = '';
-            let frameClass = 'frame-wrapper';
+            const frameStyle = `border-color: ${frameValue}`;
+            const initial = userName[0].toUpperCase();
 
-            if (frameType === 'image') {
-                frameClass += ' image-frame';
-                frameStyle = `background-image: url('${frameValue}')`;
-            } else {
-                frameStyle = `border-color: ${frameValue}`;
-            }
+            const avatarHtml = avatarUrl
+                ? `<img src="${avatarUrl}" alt="${userName}">`
+                : `<span>${initial}</span>`;
 
             return `
                 <div class="insect-card ${this.isUniversalMode ? 'with-frame' : ''}" data-id="${insect.id}">
                     ${!this.isUniversalMode ? '<button class="delete-card-btn" aria-label="Delete insect">&times;</button>' : ''}
-                    <div class="${frameClass}" style="${frameStyle}">
-                        <img src="${insect.imageUrl}" alt="${insect.name}" loading="lazy">
+                    <div class="frame-wrapper" style="${frameStyle}">
+                        <img src="${insect.imageUrl}" class="main-img" alt="${insect.name}" loading="lazy">
                     </div>
                     <div class="insect-info">
-                        <h3>${insect.name}</h3>
-                        ${this.isUniversalMode ? `<p class="user-owner">By: ${insect.userName}</p>` : ''}
-                        <p>${new Date(insect.dateAdded).toLocaleDateString()}</p>
+                        <div class="info-text">
+                            <h3>${insect.name}</h3>
+                            <p>${new Date(insect.dateAdded).toLocaleDateString()}</p>
+                            ${this.isUniversalMode ? `<p class="user-owner">By: ${insect.userName}</p>` : ''}
+                        </div>
+                        <div class="user-avatar-badge" title="${userName}">
+                            ${avatarHtml}
+                        </div>
                     </div>
                 </div>
             `;
@@ -376,17 +402,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const framingModal = document.getElementById('framing-modal');
     const closeFramingBtn = document.querySelector('.close-framing-btn');
     const frameColorInput = document.getElementById('frame-color-input');
-    const frameUploadArea = document.getElementById('frame-upload-area');
-    const frameFileInput = document.getElementById('frame-file-input');
+    const avatarUploadArea = document.getElementById('avatar-upload-area');
+    const avatarFileInput = document.getElementById('avatar-file-input');
+    const avatarPreview = document.getElementById('avatar-preview');
     const framePreviewBox = document.getElementById('frame-preview-box');
     const saveFrameBtn = document.getElementById('save-frame-btn');
 
     let isLogin = true;
     let selectedInsects = [];
     let lastSurprise = null;
-    let pendingFrameType = 'color';
     let pendingFrameValue = '#4ade80';
-    let pendingFrameFile = null;
+    let pendingAvatarUrl = null;
+    let pendingAvatarFile = null;
 
     // Supabase Auth State Listener
     if (sb) {
@@ -483,10 +510,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     frameSettingsBtn.addEventListener('click', () => {
         if (!albumManager.userProfile) return;
 
-        pendingFrameType = albumManager.userProfile.frame_type || 'color';
         pendingFrameValue = albumManager.userProfile.frame_value || '#4ade80';
+        pendingAvatarUrl = albumManager.userProfile.avatar_url;
+        pendingAvatarFile = null;
 
-        frameColorInput.value = pendingFrameType === 'color' ? pendingFrameValue : '#4ade80';
+        frameColorInput.value = pendingFrameValue;
         updateFramePreview();
         framingModal.classList.remove('hidden');
     });
@@ -497,21 +525,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     frameColorInput.addEventListener('input', (e) => {
-        pendingFrameType = 'color';
         pendingFrameValue = e.target.value;
         updateFramePreview();
     });
 
-    frameUploadArea.addEventListener('click', () => frameFileInput.click());
+    avatarUploadArea.addEventListener('click', () => avatarFileInput.click());
 
-    frameFileInput.addEventListener('change', (e) => {
+    avatarFileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            pendingFrameFile = file;
-            pendingFrameType = 'image';
+            pendingAvatarFile = file;
             const reader = new FileReader();
             reader.onload = (re) => {
-                pendingFrameValue = re.target.result;
+                pendingAvatarUrl = re.target.result;
                 updateFramePreview();
             };
             reader.readAsDataURL(file);
@@ -520,15 +546,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateFramePreview() {
         const wrapper = framePreviewBox.querySelector('.frame-wrapper');
-        if (pendingFrameType === 'image') {
-            wrapper.classList.add('image-frame');
-            wrapper.style.backgroundImage = `url('${pendingFrameValue}')`;
-            wrapper.style.borderColor = 'transparent';
-        } else {
-            wrapper.classList.remove('image-frame');
-            wrapper.style.backgroundImage = 'none';
-            wrapper.style.borderColor = pendingFrameValue;
-        }
+        wrapper.style.borderColor = pendingFrameValue;
+
+        const initial = (albumManager.currentUser?.email || 'U')[0].toUpperCase();
+        avatarPreview.innerHTML = pendingAvatarUrl
+            ? `<img src="${pendingAvatarUrl}" alt="Preview">`
+            : `<span class="avatar-fallback">${initial}</span>`;
     }
 
     saveFrameBtn.addEventListener('click', async () => {
@@ -538,29 +561,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         saveFrameBtn.textContent = 'Saving...';
 
         try {
-            let finalValue = pendingFrameValue;
+            let finalAvatarUrl = albumManager.userProfile?.avatar_url;
 
-            if (pendingFrameType === 'image' && pendingFrameFile) {
-                const uploadedUrl = await db.uploadFrameImage(albumManager.currentUser.id, pendingFrameFile);
-                if (uploadedUrl) finalValue = uploadedUrl;
+            if (pendingAvatarFile) {
+                const uploadedUrl = await db.uploadAvatar(albumManager.currentUser.id, pendingAvatarFile);
+                if (uploadedUrl) finalAvatarUrl = uploadedUrl;
             }
 
             await db.updateProfile(albumManager.currentUser.id, {
-                frame_type: pendingFrameType,
-                frame_value: finalValue
+                frame_type: 'color',
+                frame_value: pendingFrameValue,
+                avatar_url: finalAvatarUrl
             });
 
             // Update local state and refresh
             albumManager.userProfile = await db.getProfile(albumManager.currentUser.id);
             albumManager.render();
             framingModal.classList.add('hidden');
-            pendingFrameFile = null;
+            pendingAvatarFile = null;
         } catch (error) {
-            console.error('Save Frame Error:', error);
-            alert('Failed to save frame selection.');
+            console.error('Save Personalization Error:', error);
+            alert('Failed to save settings.');
         } finally {
             saveFrameBtn.disabled = false;
-            saveFrameBtn.textContent = 'Save Frame Selection';
+            saveFrameBtn.textContent = 'Save Personalization';
         }
     });
 
