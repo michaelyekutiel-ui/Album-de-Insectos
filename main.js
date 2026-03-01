@@ -260,17 +260,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Handle deletion clicks on the grid
+    // Handle clicks on the grid
     document.getElementById('album-grid').addEventListener('click', (e) => {
         const deleteBtn = e.target.closest('.delete-card-btn');
+        const card = e.target.closest('.insect-card');
+
         if (deleteBtn) {
-            const card = deleteBtn.closest('.insect-card');
-            const id = parseInt(card.dataset.id);
+            const id = parseFloat(card.dataset.id);
             const insectName = card.querySelector('h3').textContent;
 
             if (confirm(`Are you sure you want to remove "${insectName}" from your album?`)) {
                 albumManager.deleteInsect(id);
             }
+            return;
+        }
+
+        if (card) {
+            const imgUrl = card.querySelector('img').src;
+            const insectName = card.querySelector('h3').textContent;
+
+            viewerImg.src = imgUrl;
+            viewerName.textContent = insectName;
+            viewerModal.classList.remove('hidden');
         }
     });
 });
