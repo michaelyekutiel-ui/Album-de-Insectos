@@ -19,15 +19,63 @@
     <header class="glass">
         <div class="header-content">
             <h1>Album de Insectos</h1>
-            <div class="auth-controls">
-                <button id="auth-btn" class="glass-btn">Sign In</button>
-                <div id="user-info" class="hidden">
-                    <span id="user-email"></span>
-                    <button id="logout-btn" class="text-btn">Logout</button>
+            <div class="header-controls">
+                <div class="universal-toggle-container">
+                    <span>Universal</span>
+                    <label class="switch">
+                        <input type="checkbox" id="universal-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="auth-controls">
+                    <button id="auth-btn" class="glass-btn">Sign In</button>
+                    <div id="user-info" class="hidden">
+                        <button id="frame-settings-btn" class="icon-btn" title="Frame Settings">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                            </svg>
+                        </button>
+                        <span id="user-email"></span>
+                        <button id="logout-btn" class="text-btn">Logout</button>
+                    </div>
                 </div>
             </div>
         </div>
     </header>
+
+    <!-- Framing Modal -->
+    <div id="framing-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content glass framing-content">
+            <button class="close-framing-btn close-btn">&times;</button>
+            <h2 class="modal-title">Choose Your Frame</h2>
+            <div class="framing-options">
+                <div class="option-row">
+                    <label>Frame Color</label>
+                    <input type="color" id="frame-color-input" value="#4ade80">
+                </div>
+                <div class="option-divider"><span>OR</span></div>
+                <div class="option-row">
+                    <label>Frame Image</label>
+                    <div class="upload-area" id="frame-upload-area">
+                        <p>Click to Upload Frame Image</p>
+                        <input type="file" id="frame-file-input" accept="image/*" hidden>
+                    </div>
+                </div>
+            </div>
+            <div class="preview-section">
+                <p>Preview</p>
+                <div class="frame-preview-box" id="frame-preview-box">
+                    <div class="frame-wrapper" style="border-color: #4ade80">
+                        <img src="https://via.placeholder.com/150" alt="Preview">
+                    </div>
+                </div>
+            </div>
+            <button id="save-frame-btn" class="primary-btn">Save Frame Selection</button>
+        </div>
+    </div>
 
     <main id="album-grid" class="album-grid">
         <!-- Cards will be injected here -->

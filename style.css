@@ -53,18 +53,102 @@ h1 {
     padding: 0 1rem;
 }
 
-.auth-controls {
+.header-controls {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 2rem;
+}
+
+.universal-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Switch Component */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: .4s;
+    border: 1px solid var(--glass-border);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #fff;
+    transition: .4s;
+}
+
+input:checked+.slider {
+    background-color: var(--accent-color);
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px var(--accent-color);
+}
+
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
 }
 
 #user-info {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
     font-size: 0.9rem;
     color: var(--text-secondary);
+}
+
+.icon-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-color);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
 }
 
 .text-btn {
@@ -567,4 +651,118 @@ input[type="text"]:focus {
 .glass {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+}
+
+/* Framing Modal Specifics */
+.framing-content {
+    max-width: 500px;
+    text-align: center;
+}
+
+.framing-options {
+    margin: 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.option-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 1rem;
+    border: 1px solid var(--glass-border);
+}
+
+.option-divider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.option-divider::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    background: var(--glass-border);
+}
+
+.option-divider span {
+    background: var(--bg-color);
+    padding: 0 1rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    z-index: 1;
+}
+
+.upload-area {
+    padding: 1rem;
+    border: 2px dashed var(--glass-border);
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.upload-area:hover {
+    border-color: var(--accent-color);
+    background: rgba(74, 222, 128, 0.05);
+}
+
+.preview-section {
+    margin: 2rem 0;
+}
+
+.frame-preview-box {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+}
+
+.frame-wrapper {
+    padding: 8px;
+    border: 4px solid var(--accent-color);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.frame-wrapper.image-frame {
+    border: none;
+    padding: 15px;
+    background-size: cover;
+    background-position: center;
+}
+
+.frame-wrapper img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    display: block;
+}
+
+/* Update Card Styles for Framing */
+.insect-card .frame-wrapper {
+    width: 100%;
+    border-radius: 0;
+    padding: 12px;
+}
+
+.insect-card .frame-wrapper img {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 0.75rem;
+}
+
+.insect-card.with-frame {
+    border: none;
+    background: none;
+    backdrop-filter: none;
 }

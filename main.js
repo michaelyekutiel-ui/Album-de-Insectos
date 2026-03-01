@@ -32,8 +32,80 @@ class SupabaseService {
             id: item.id,
             name: item.name,
             imageUrl: item.image_url,
-            dateAdded: item.date_added
+            dateAdded: item.date_added,
+            userId: item.user_id
         }));
+    }
+
+    async getAllInsects() {
+        if (!this.client) return [];
+        // Fetch insects joined with profiles to get framing info
+        const { data, error } = await this.client
+            .from('insects')
+            .select('*, profiles(id, email, frame_type, frame_value)')
+            .order('date_added', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching all insects:', error);
+            return [];
+        }
+        return data.map(item => ({
+            id: item.id,
+            name: item.name,
+            imageUrl: item.image_url,
+            dateAdded: item.date_added,
+            userId: item.user_id,
+            userName: item.profiles?.email || 'Unknown User',
+            frameType: item.profiles?.frame_type || 'color',
+            frameValue: item.profiles?.frame_value || '#4ade80'
+        }));
+    }
+
+    async getProfile(userId) {
+        if (!this.client) return null;
+        const { data, error } = await this.client
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (error) {
+            console.error('Error fetching profile:', error);
+            return null;
+        }
+        return data;
+    }
+
+    async updateProfile(userId, profileData) {
+        if (!this.client) return;
+        const { error } = await this.client
+            .from('profiles')
+            .update(profileData)
+            .eq('id', userId);
+
+        if (error) console.error('Error updating profile:', error);
+    }
+
+    async uploadFrameImage(userId, file) {
+        if (!this.client) return null;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}-${Math.random()}.${fileExt}`;
+        const filePath = `frames/${fileName}`;
+
+        const { error: uploadError } = await this.client.storage
+            .from('frames')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            console.error('Error uploading frame image:', uploadError);
+            return null;
+        }
+
+        const { data: { publicUrl } } = this.client.storage
+            .from('frames')
+            .getPublicUrl(filePath);
+
+        return publicUrl;
     }
 
     async addInsects(insects, userId) {
@@ -69,21 +141,39 @@ class AlbumManager {
         this.album = JSON.parse(localStorage.getItem('insect-album')) || [];
         this.gridElement = document.getElementById('album-grid');
         this.currentUser = null;
+        this.userProfile = null;
+        this.isUniversalMode = false;
     }
 
     async setUser(user) {
         this.currentUser = user;
         if (user) {
-            // Fetch from Supabase and merge with local? 
-            // For now, let's just replace with cloud data if logged in
-            const cloudAlbum = await this.db.getInsects();
-            if (cloudAlbum.length > 0 || this.album.length > 0) {
-                // If local has data but cloud is empty, maybe sync up?
-                if (cloudAlbum.length === 0 && this.album.length > 0) {
-                    await this.db.addInsects(this.album, user.id);
+            this.userProfile = await this.db.getProfile(user.id);
+            await this.refreshAlbum();
+        } else {
+            this.userProfile = null;
+            this.isUniversalMode = false;
+            this.album = JSON.parse(localStorage.getItem('insect-album')) || [];
+            this.render();
+        }
+    }
+
+    async setUniversalMode(enabled) {
+        this.isUniversalMode = enabled;
+        await this.refreshAlbum();
+    }
+
+    async refreshAlbum() {
+        if (this.currentUser) {
+            if (this.isUniversalMode) {
+                this.album = await this.db.getAllInsects();
+            } else {
+                this.album = await this.db.getInsects();
+                // Check for local migration
+                const localData = JSON.parse(localStorage.getItem('insect-album')) || [];
+                if (localData.length > 0 && this.album.length === 0) {
+                    await this.db.addInsects(localData, this.currentUser.id);
                     this.album = await this.db.getInsects();
-                } else {
-                    this.album = cloudAlbum;
                 }
             }
         } else {
@@ -99,7 +189,7 @@ class AlbumManager {
     async addInsects(insects) {
         if (this.currentUser) {
             await this.db.addInsects(insects, this.currentUser.id);
-            this.album = await this.db.getInsects();
+            await this.refreshAlbum();
         } else {
             const newItems = insects.map(item => ({
                 id: Date.now() + Math.random(),
@@ -109,41 +199,60 @@ class AlbumManager {
             }));
             this.album = [...newItems, ...this.album];
             this.saveLocal();
+            this.render();
         }
-        this.render();
     }
 
     async deleteInsect(id) {
         if (this.currentUser) {
             await this.db.deleteInsect(id);
-            this.album = await this.db.getInsects();
+            await this.refreshAlbum();
         } else {
             this.album = this.album.filter(insect => insect.id !== id);
             this.saveLocal();
+            this.render();
         }
-        this.render();
     }
 
     render() {
         if (this.album.length === 0) {
+            const msg = this.isUniversalMode ? "No insects found in the world yet." : "Your album is empty. Click the + button to add your first insect!";
             this.gridElement.innerHTML = `
                 <div class="empty-state">
-                    <p>Your album is empty. Click the + button to add your first insect!</p>
+                    <p>${msg}</p>
                 </div>
             `;
             return;
         }
 
-        this.gridElement.innerHTML = this.album.map(insect => `
-            <div class="insect-card" data-id="${insect.id}">
-                <button class="delete-card-btn" aria-label="Delete insect">&times;</button>
-                <img src="${insect.imageUrl}" alt="${insect.name}" loading="lazy">
-                <div class="insect-info">
-                    <h3>${insect.name}</h3>
-                    <p>${new Date(insect.dateAdded).toLocaleDateString()}</p>
+        this.gridElement.innerHTML = this.album.map(insect => {
+            const frameType = this.isUniversalMode ? (insect.frameType || 'color') : (this.userProfile?.frame_type || 'color');
+            const frameValue = this.isUniversalMode ? (insect.frameValue || '#4ade80') : (this.userProfile?.frame_value || '#4ade80');
+
+            let frameStyle = '';
+            let frameClass = 'frame-wrapper';
+
+            if (frameType === 'image') {
+                frameClass += ' image-frame';
+                frameStyle = `background-image: url('${frameValue}')`;
+            } else {
+                frameStyle = `border-color: ${frameValue}`;
+            }
+
+            return `
+                <div class="insect-card ${this.isUniversalMode ? 'with-frame' : ''}" data-id="${insect.id}">
+                    ${!this.isUniversalMode ? '<button class="delete-card-btn" aria-label="Delete insect">&times;</button>' : ''}
+                    <div class="${frameClass}" style="${frameStyle}">
+                        <img src="${insect.imageUrl}" alt="${insect.name}" loading="lazy">
+                    </div>
+                    <div class="insect-info">
+                        <h3>${insect.name}</h3>
+                        ${this.isUniversalMode ? `<p class="user-owner">By: ${insect.userName}</p>` : ''}
+                        <p>${new Date(insect.dateAdded).toLocaleDateString()}</p>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 }
 
@@ -261,9 +370,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewerName = document.getElementById('viewer-name');
     const closeViewerBtn = document.querySelector('.close-viewer-btn');
 
+    // New UI Elements
+    const universalToggle = document.getElementById('universal-toggle');
+    const frameSettingsBtn = document.getElementById('frame-settings-btn');
+    const framingModal = document.getElementById('framing-modal');
+    const closeFramingBtn = document.querySelector('.close-framing-btn');
+    const frameColorInput = document.getElementById('frame-color-input');
+    const frameUploadArea = document.getElementById('frame-upload-area');
+    const frameFileInput = document.getElementById('frame-file-input');
+    const framePreviewBox = document.getElementById('frame-preview-box');
+    const saveFrameBtn = document.getElementById('save-frame-btn');
+
     let isLogin = true;
     let selectedInsects = [];
     let lastSurprise = null;
+    let pendingFrameType = 'color';
+    let pendingFrameValue = '#4ade80';
+    let pendingFrameFile = null;
 
     // Supabase Auth State Listener
     if (sb) {
@@ -285,6 +408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             authBtn.classList.remove('hidden');
             userInfo.classList.add('hidden');
             albumManager.setUser(null);
+            universalToggle.checked = false;
         }
     }
 
@@ -348,6 +472,96 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     logoutBtn.addEventListener('click', async () => {
         if (sb) await sb.auth.signOut();
+    });
+
+    // Universal Mode Toggle
+    universalToggle.addEventListener('change', (e) => {
+        albumManager.setUniversalMode(e.target.checked);
+    });
+
+    // Framing Selection Logic
+    frameSettingsBtn.addEventListener('click', () => {
+        if (!albumManager.userProfile) return;
+
+        pendingFrameType = albumManager.userProfile.frame_type || 'color';
+        pendingFrameValue = albumManager.userProfile.frame_value || '#4ade80';
+
+        frameColorInput.value = pendingFrameType === 'color' ? pendingFrameValue : '#4ade80';
+        updateFramePreview();
+        framingModal.classList.remove('hidden');
+    });
+
+    closeFramingBtn.addEventListener('click', () => {
+        framingModal.classList.add('hidden');
+        pendingFrameFile = null;
+    });
+
+    frameColorInput.addEventListener('input', (e) => {
+        pendingFrameType = 'color';
+        pendingFrameValue = e.target.value;
+        updateFramePreview();
+    });
+
+    frameUploadArea.addEventListener('click', () => frameFileInput.click());
+
+    frameFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            pendingFrameFile = file;
+            pendingFrameType = 'image';
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                pendingFrameValue = re.target.result;
+                updateFramePreview();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function updateFramePreview() {
+        const wrapper = framePreviewBox.querySelector('.frame-wrapper');
+        if (pendingFrameType === 'image') {
+            wrapper.classList.add('image-frame');
+            wrapper.style.backgroundImage = `url('${pendingFrameValue}')`;
+            wrapper.style.borderColor = 'transparent';
+        } else {
+            wrapper.classList.remove('image-frame');
+            wrapper.style.backgroundImage = 'none';
+            wrapper.style.borderColor = pendingFrameValue;
+        }
+    }
+
+    saveFrameBtn.addEventListener('click', async () => {
+        if (!albumManager.currentUser) return;
+
+        saveFrameBtn.disabled = true;
+        saveFrameBtn.textContent = 'Saving...';
+
+        try {
+            let finalValue = pendingFrameValue;
+
+            if (pendingFrameType === 'image' && pendingFrameFile) {
+                const uploadedUrl = await db.uploadFrameImage(albumManager.currentUser.id, pendingFrameFile);
+                if (uploadedUrl) finalValue = uploadedUrl;
+            }
+
+            await db.updateProfile(albumManager.currentUser.id, {
+                frame_type: pendingFrameType,
+                frame_value: finalValue
+            });
+
+            // Update local state and refresh
+            albumManager.userProfile = await db.getProfile(albumManager.currentUser.id);
+            albumManager.render();
+            framingModal.classList.add('hidden');
+            pendingFrameFile = null;
+        } catch (error) {
+            console.error('Save Frame Error:', error);
+            alert('Failed to save frame selection.');
+        } finally {
+            saveFrameBtn.disabled = false;
+            saveFrameBtn.textContent = 'Save Frame Selection';
+        }
     });
 
     // Original Album Logic
