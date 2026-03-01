@@ -3,14 +3,14 @@
  */
 
 // Initialize Supabase Client (only if config is provided)
-let supabase = null;
+let sb = null;
 if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.url !== "YOUR_SUPABASE_URL") {
-    supabase = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+    sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
 }
 
 class SupabaseService {
     constructor() {
-        this.client = supabase;
+        this.client = sb;
     }
 
     async getInsects() {
@@ -254,11 +254,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     let lastSurprise = null;
 
     // Supabase Auth State Listener
-    if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
+    if (sb) {
+        const { data: { session } } = await sb.auth.getSession();
         handleAuthStateChange(session?.user || null);
 
-        supabase.auth.onAuthStateChange((_event, session) => {
+        sb.auth.onAuthStateChange((_event, session) => {
             handleAuthStateChange(session?.user || null);
         });
     }
@@ -299,9 +299,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             let result;
             if (isLogin) {
-                result = await supabase.auth.signInWithPassword({ email, password });
+                result = await sb.auth.signInWithPassword({ email, password });
             } else {
-                result = await supabase.auth.signUp({ email, password });
+                result = await sb.auth.signUp({ email, password });
                 if (result.data?.user && !result.data.session) {
                     alert('Check your email for the confirmation link!');
                 }
@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     logoutBtn.onclick = async () => {
-        await supabase.auth.signOut();
+        await sb.auth.signOut();
     };
 
     // Original Album Logic
