@@ -288,44 +288,56 @@ class WikipediaSearch {
     }
 
     async search(query) {
-        const params = new URLSearchParams({
-            action: 'query',
-            format: 'json',
-            list: 'search',
-            srsearch: `${query} insect filetype:bitmap`,
-            srnamespace: '6',
-            origin: '*'
-        });
+        const fallbacks = [
+            `${query} insect filetype:bitmap`,
+            `${query} filetype:bitmap`,
+            `${query}`
+        ];
 
-        try {
-            const response = await fetch(`${this.baseUrl}?${params}`);
-            const data = await response.json();
-            if (!data.query || !data.query.search) return [];
-
-            const titles = data.query.search.map(result => result.title).join('|');
-            if (!titles) return [];
-
-            const imageParams = new URLSearchParams({
+        for (const srsearch of fallbacks) {
+            const params = new URLSearchParams({
                 action: 'query',
                 format: 'json',
-                prop: 'imageinfo',
-                iiprop: 'url',
-                titles: titles,
+                list: 'search',
+                srsearch: srsearch,
+                srnamespace: '6',
                 origin: '*'
             });
 
-            const imageResponse = await fetch(`${this.baseUrl}?${imageParams}`);
-            const imageData = await imageResponse.json();
+            try {
+                const response = await fetch(`${this.baseUrl}?${params}`);
+                const data = await response.json();
+                if (!data.query || !data.query.search || data.query.search.length === 0) continue;
 
-            const pages = imageData.query.pages;
-            return Object.values(pages)
-                .map(page => page.imageinfo ? page.imageinfo[0].url : null)
-                .filter(url => url !== null);
+                const titles = data.query.search.map(result => result.title).join('|');
+                if (!titles) continue;
 
-        } catch (error) {
-            console.error('Search failed:', error);
-            return [];
+                const imageParams = new URLSearchParams({
+                    action: 'query',
+                    format: 'json',
+                    prop: 'imageinfo',
+                    iiprop: 'url',
+                    titles: titles,
+                    origin: '*'
+                });
+
+                const imageResponse = await fetch(`${this.baseUrl}?${imageParams}`);
+                const imageData = await imageResponse.json();
+
+                if (!imageData.query || !imageData.query.pages) continue;
+
+                const pages = imageData.query.pages;
+                const urls = Object.values(pages)
+                    .map(page => page.imageinfo ? page.imageinfo[0].url : null)
+                    .filter(url => url !== null);
+
+                if (urls.length > 0) return urls;
+
+            } catch (error) {
+                console.error(`Search fallback failed for "${srsearch}":`, error);
+            }
         }
+        return [];
     }
 }
 
@@ -644,7 +656,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchBtn.disabled = false;
         resultsGrid.innerHTML = '';
         if (images.length === 0) {
-            resultsGrid.innerHTML = '<p>No images found. Try a different name.</p>';
+            resultsGrid.innerHTML = `
+                <div class="no-results">
+                    <p>No images found for "${query}".</p>
+                    <p class="search-tip">💡 <strong>Tip:</strong> Try searching for the <strong>scientific name</strong> (e.g., <em>"Pseudosphinx"</em> instead of <em>"Pseudoesfinge"</em>) for better results on Wikimedia.</p>
+                </div>
+            `;
             return;
         }
         images.forEach(url => {
