@@ -764,15 +764,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeViewerBtn.addEventListener('click', closeViewer);
 
     const updateZoom = () => {
-        viewerImg.style.transform = `scale(${viewerScale})`;
-        // If scaled up, allow image to overflow container for scrolling
-        if (viewerScale > 1) {
-            viewerImg.style.maxWidth = 'none';
-            viewerImg.style.maxHeight = 'none';
-        } else {
-            viewerImg.style.maxWidth = '100%';
-            viewerImg.style.maxHeight = '100%';
-        }
+        // Use width percentage for zooming to ensure proper scrolling
+        const percent = Math.round(viewerScale * 100);
+        viewerImg.style.width = `${percent}%`;
+        viewerImg.style.maxWidth = 'none';
+        viewerImg.style.maxHeight = 'none';
+        viewerImg.style.transform = 'none';
     };
 
     const resetZoom = () => {
