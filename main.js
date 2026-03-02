@@ -167,7 +167,7 @@ class AlbumManager {
         this.currentUser = null;
         this.userProfile = null;
         this.isUniversalMode = false;
-        this.isGroupedMode = false;
+        this.isGroupedMode = true;
     }
 
     async setUser(user) {
@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             userInfo.classList.add('hidden');
             albumManager.setUser(null);
             universalToggle.checked = false;
-            groupSpeciesToggle.checked = false;
+            groupSpeciesToggle.checked = true;
         }
     }
 
