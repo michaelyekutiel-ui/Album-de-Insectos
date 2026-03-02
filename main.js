@@ -288,62 +288,105 @@ class AlbumManager {
     }
 }
 
-class WikipediaSearch {
+class iNaturalistSearch {
     constructor() {
-        this.baseUrl = 'https://commons.wikimedia.org/w/api.php';
+        this.baseUrl = 'https://api.inaturalist.org/v1';
     }
 
     async search(query) {
-        const fallbacks = [
-            `${query} insect filetype:bitmap`,
-            `${query} filetype:bitmap`,
-            `${query}`
-        ];
+        try {
+            // Step 1: Try to resolve the query to a taxon (supports common names!)
+            const taxonId = await this.findTaxonId(query);
 
-        for (const srsearch of fallbacks) {
-            const params = new URLSearchParams({
-                action: 'query',
-                format: 'json',
-                list: 'search',
-                srsearch: srsearch,
-                srnamespace: '6',
-                origin: '*'
-            });
-
-            try {
-                const response = await fetch(`${this.baseUrl}?${params}`);
-                const data = await response.json();
-                if (!data.query || !data.query.search || data.query.search.length === 0) continue;
-
-                const titles = data.query.search.map(result => result.title).join('|');
-                if (!titles) continue;
-
-                const imageParams = new URLSearchParams({
-                    action: 'query',
-                    format: 'json',
-                    prop: 'imageinfo',
-                    iiprop: 'url',
-                    titles: titles,
-                    origin: '*'
-                });
-
-                const imageResponse = await fetch(`${this.baseUrl}?${imageParams}`);
-                const imageData = await imageResponse.json();
-
-                if (!imageData.query || !imageData.query.pages) continue;
-
-                const pages = imageData.query.pages;
-                const urls = Object.values(pages)
-                    .map(page => page.imageinfo ? page.imageinfo[0].url : null)
-                    .filter(url => url !== null);
-
+            if (taxonId) {
+                // Step 2: Get research-grade observations with photos for this taxon
+                const urls = await this.getObservationPhotos(taxonId);
                 if (urls.length > 0) return urls;
+            }
 
-            } catch (error) {
-                console.error(`Search fallback failed for "${srsearch}":`, error);
+            // Fallback: Search observations directly by query string
+            const fallbackUrls = await this.searchObservationsByQuery(query);
+            return fallbackUrls;
+
+        } catch (error) {
+            console.error('iNaturalist search failed:', error);
+            return [];
+        }
+    }
+
+    async findTaxonId(query) {
+        const params = new URLSearchParams({
+            q: query,
+            per_page: '1',
+            iconic_taxa: 'Insecta'
+        });
+        try {
+            const response = await fetch(`${this.baseUrl}/taxa?${params}`);
+            const data = await response.json();
+            if (data.results && data.results.length > 0) {
+                return data.results[0].id;
+            }
+        } catch (e) {
+            console.error('Taxon lookup failed:', e);
+        }
+        return null;
+    }
+
+    async getObservationPhotos(taxonId) {
+        const params = new URLSearchParams({
+            taxon_id: taxonId.toString(),
+            photos: 'true',
+            quality_grade: 'research',
+            per_page: '30',
+            order: 'desc',
+            order_by: 'votes'
+        });
+        try {
+            const response = await fetch(`${this.baseUrl}/observations?${params}`);
+            const data = await response.json();
+            return this.extractPhotoUrls(data);
+        } catch (e) {
+            console.error('Observation fetch failed:', e);
+            return [];
+        }
+    }
+
+    async searchObservationsByQuery(query) {
+        const params = new URLSearchParams({
+            q: query,
+            photos: 'true',
+            quality_grade: 'research',
+            per_page: '30',
+            order: 'desc',
+            order_by: 'votes',
+            iconic_taxa: 'Insecta'
+        });
+        try {
+            const response = await fetch(`${this.baseUrl}/observations?${params}`);
+            const data = await response.json();
+            return this.extractPhotoUrls(data);
+        } catch (e) {
+            console.error('Query search failed:', e);
+            return [];
+        }
+    }
+
+    extractPhotoUrls(data) {
+        if (!data.results) return [];
+        const urls = [];
+        const seen = new Set();
+        for (const obs of data.results) {
+            if (!obs.photos) continue;
+            for (const photo of obs.photos) {
+                // Convert square URL to medium (500px) for quality
+                const mediumUrl = photo.url.replace('/square.', '/medium.');
+                if (!seen.has(mediumUrl)) {
+                    seen.add(mediumUrl);
+                    urls.push(mediumUrl);
+                }
             }
         }
-        return [];
+        return urls;
     }
 }
 
@@ -382,7 +425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const db = new SupabaseService();
     const albumManager = new AlbumManager(db);
-    const searchService = new WikipediaSearch();
+    const searchService = new iNaturalistSearch();
 
     // UI Elements
     const authBtn = document.getElementById('auth-btn');
