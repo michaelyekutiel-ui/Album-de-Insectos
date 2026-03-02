@@ -765,11 +765,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const updateZoom = () => {
         const percent = Math.round(viewerScale * 100);
-        console.log(`[DEBUG] updateZoom: scale=${viewerScale}, percent=${percent}%`);
         viewerImg.style.width = `${percent}%`;
         viewerImg.style.maxWidth = 'none';
         viewerImg.style.maxHeight = 'none';
         viewerImg.style.transform = 'none';
+
+        // If zoomed in, align to top-left to allow scrolling over the whole image
+        if (viewerScale > 1) {
+            zoomContainer.style.alignItems = 'flex-start';
+            zoomContainer.style.justifyContent = 'flex-start';
+        } else {
+            zoomContainer.style.alignItems = 'center';
+            zoomContainer.style.justifyContent = 'center';
+        }
     };
 
     const resetZoom = () => {
@@ -778,29 +786,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const changeZoom = (delta) => {
-        const oldScale = viewerScale;
         const newScale = viewerScale + delta;
-        console.log(`[DEBUG] changeZoom: delta=${delta}, old=${oldScale}, new=${newScale}`);
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             viewerScale = newScale;
             updateZoom();
-        } else {
-            console.warn(`[DEBUG] changeZoom: Scale limit reached (${newScale})`);
         }
     };
 
-    zoomInBtn.addEventListener('click', (e) => {
-        console.log('[DEBUG] Zoom In Button Clicked');
-        changeZoom(ZOOM_STEP);
-    });
-    zoomOutBtn.addEventListener('click', (e) => {
-        console.log('[DEBUG] Zoom Out Button Clicked');
-        changeZoom(-ZOOM_STEP);
-    });
-    zoomResetBtn.addEventListener('click', (e) => {
-        console.log('[DEBUG] Zoom Reset Button Clicked');
-        resetZoom();
-    });
+    zoomInBtn.addEventListener('click', () => changeZoom(ZOOM_STEP));
+    zoomOutBtn.addEventListener('click', () => changeZoom(-ZOOM_STEP));
+    zoomResetBtn.addEventListener('click', resetZoom);
 
     zoomContainer.addEventListener('wheel', (e) => {
         e.preventDefault();
