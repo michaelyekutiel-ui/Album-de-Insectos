@@ -249,6 +249,37 @@ class AlbumManager {
         }
     }
 
+    openGroup(speciesName) {
+        const photos = this.album.filter(ins => ins.name === speciesName);
+        const modal = document.getElementById('group-modal');
+        const title = document.getElementById('group-modal-title');
+        const grid = document.getElementById('group-photo-grid');
+
+        title.textContent = `${speciesName} (${photos.length} Photos)`;
+        grid.innerHTML = photos.map(photo => `
+            <div class="group-photo-item" data-id="${photo.id}">
+                <img src="${photo.imageUrl}" alt="${photo.name}">
+            </div>
+        `).join('');
+
+        modal.classList.remove('hidden');
+
+        // Wire up clicks for photos inside the group
+        grid.querySelectorAll('.group-photo-item').forEach(item => {
+            item.onclick = () => {
+                const photo = photos.find(p => p.id == item.dataset.id);
+                if (photo) {
+                    const viewerModal = document.getElementById('viewer-modal');
+                    const viewerImg = document.getElementById('viewer-image');
+                    const viewerName = document.getElementById('viewer-name');
+                    viewerImg.src = photo.imageUrl;
+                    viewerName.textContent = photo.name;
+                    viewerModal.classList.remove('hidden');
+                }
+            };
+        });
+    }
+
     render() {
         if (this.album.length === 0) {
             const msg = this.isUniversalMode ? "No insects found in the world yet." : "Your album is empty. Click the + button to add your first insect!";
@@ -485,6 +516,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // New UI Elements
     const universalToggle = document.getElementById('universal-toggle');
     const groupSpeciesToggle = document.getElementById('group-species-toggle');
+    const groupModal = document.getElementById('group-modal');
+    const closeGroupBtn = document.querySelector('.close-group-btn');
     const frameSettingsBtn = document.getElementById('frame-settings-btn');
     const framingModal = document.getElementById('framing-modal');
     const closeFramingBtn = document.querySelector('.close-framing-btn');
@@ -718,6 +751,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeViewer = () => viewerModal.classList.add('hidden');
     closeViewerBtn.addEventListener('click', closeViewer);
 
+    closeGroupBtn.addEventListener('click', () => groupModal.classList.add('hidden'));
+
     const updatePreview = () => {
         if (selectedInsects.length === 0) {
             previewArea.classList.add('hidden');
@@ -788,9 +823,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         if (card) {
-            viewerImg.src = card.querySelector('img').src;
-            viewerName.textContent = card.querySelector('h3').textContent;
-            viewerModal.classList.remove('hidden');
+            if (card.classList.contains('is-group')) {
+                albumManager.openGroup(card.dataset.name);
+            } else {
+                viewerImg.src = card.querySelector('img').src;
+                viewerName.textContent = card.querySelector('h3').textContent;
+                viewerModal.classList.remove('hidden');
+            }
         }
     };
 });

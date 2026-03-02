@@ -854,6 +854,40 @@ input[type="text"]:focus {
     border: 2px solid #000;
 }
 
+/* Group Modal Styles */
+.group-content {
+    max-width: 1000px;
+    width: 95%;
+}
+
+.group-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.group-photo-item {
+    cursor: pointer;
+    transition: var(--transition);
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+
+.group-photo-item:hover {
+    transform: scale(1.05);
+    border-color: var(--accent-color);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.group-photo-item img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+}
+
 .user-avatar-small {
     width: 68px;
     height: 68px;
