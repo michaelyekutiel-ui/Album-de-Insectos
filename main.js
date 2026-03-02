@@ -167,6 +167,7 @@ class AlbumManager {
         this.currentUser = null;
         this.userProfile = null;
         this.isUniversalMode = false;
+        this.isGroupedMode = false;
     }
 
     async setUser(user) {
@@ -190,6 +191,11 @@ class AlbumManager {
     async setUniversalMode(enabled) {
         this.isUniversalMode = enabled;
         await this.refreshAlbum();
+    }
+
+    async setGroupedMode(enabled) {
+        this.isGroupedMode = enabled;
+        this.render();
     }
 
     async refreshAlbum() {
@@ -254,7 +260,23 @@ class AlbumManager {
             return;
         }
 
-        this.gridElement.innerHTML = this.album.map(insect => {
+        let displayItems = this.album;
+        if (this.isGroupedMode) {
+            const groups = {};
+            this.album.forEach(insect => {
+                if (!groups[insect.name]) {
+                    groups[insect.name] = {
+                        ...insect,
+                        count: 1
+                    };
+                } else {
+                    groups[insect.name].count++;
+                }
+            });
+            displayItems = Object.values(groups);
+        }
+
+        this.gridElement.innerHTML = displayItems.map(insect => {
             const frameValue = this.isUniversalMode ? (insect.frameValue || '#4ade80') : (this.userProfile?.frame_value || '#4ade80');
             const avatarUrl = this.isUniversalMode ? insect.avatarUrl : this.userProfile?.avatar_url;
             const userName = this.isUniversalMode ? (insect.userName || 'Anonymous') : (this.userProfile?.username || this.currentUser?.email || 'User');
@@ -266,11 +288,14 @@ class AlbumManager {
                 ? `<img src="${avatarUrl}" alt="${userName}" onerror="this.parentElement.innerHTML='<span>${initial}</span>'">`
                 : `<span>${initial}</span>`;
 
+            const isGroup = this.isGroupedMode && insect.count > 1;
+
             return `
-                <div class="insect-card ${this.isUniversalMode ? 'with-frame' : ''}" data-id="${insect.id}">
-                    ${!this.isUniversalMode ? '<button class="delete-card-btn" aria-label="Delete insect">&times;</button>' : ''}
+                <div class="insect-card ${this.isUniversalMode ? 'with-frame' : ''} ${isGroup ? 'is-group' : ''}" data-id="${insect.id}" data-name="${insect.name}">
+                    ${!this.isUniversalMode && !isGroup ? '<button class="delete-card-btn" aria-label="Delete insect">&times;</button>' : ''}
                     <div class="frame-wrapper" style="${frameStyle}">
                         <img src="${insect.imageUrl}" class="main-img" alt="${insect.name}" loading="lazy">
+                        ${isGroup ? `<div class="group-badge">${insect.count}</div>` : ''}
                     </div>
                     <div class="insect-info">
                         <div class="info-text">
@@ -459,6 +484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // New UI Elements
     const universalToggle = document.getElementById('universal-toggle');
+    const groupSpeciesToggle = document.getElementById('group-species-toggle');
     const frameSettingsBtn = document.getElementById('frame-settings-btn');
     const framingModal = document.getElementById('framing-modal');
     const closeFramingBtn = document.querySelector('.close-framing-btn');
@@ -497,6 +523,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             userInfo.classList.add('hidden');
             albumManager.setUser(null);
             universalToggle.checked = false;
+            groupSpeciesToggle.checked = false;
         }
     }
 
@@ -565,6 +592,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Universal Mode Toggle
     universalToggle.addEventListener('change', (e) => {
         albumManager.setUniversalMode(e.target.checked);
+    });
+
+    groupSpeciesToggle.addEventListener('change', (e) => {
+        albumManager.setGroupedMode(e.target.checked);
     });
 
     // Framing Selection Logic

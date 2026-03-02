@@ -796,6 +796,64 @@ input[type="text"]:focus {
     right: -10px;
 }
 
+/* Grouped Card Styles */
+.insect-card.is-group {
+    position: relative;
+    z-index: 1;
+}
+
+.insect-card.is-group::before,
+.insect-card.is-group::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: -5px;
+    bottom: -5px;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    backdrop-filter: blur(12px);
+    z-index: -1;
+    transition: var(--transition);
+}
+
+.insect-card.is-group::after {
+    top: 10px;
+    left: 10px;
+    right: -10px;
+    bottom: -10px;
+    z-index: -2;
+    opacity: 0.6;
+}
+
+.insect-card.is-group:hover::before {
+    transform: translate(2px, 2px);
+}
+
+.insect-card.is-group:hover::after {
+    transform: translate(4px, 4px);
+}
+
+.group-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--accent-color);
+    color: #000;
+    font-weight: 800;
+    font-size: 0.9rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.4);
+    z-index: 20;
+    border: 2px solid #000;
+}
+
 .user-avatar-small {
     width: 68px;
     height: 68px;
