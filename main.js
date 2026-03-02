@@ -510,8 +510,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const viewerModal = document.getElementById('viewer-modal');
     const viewerImg = document.getElementById('viewer-image');
+    const zoomContainer = document.getElementById('zoom-container');
     const viewerName = document.getElementById('viewer-name');
     const closeViewerBtn = document.querySelector('.close-viewer-btn');
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+    const zoomResetBtn = document.getElementById('zoom-reset-btn');
+
+    let viewerScale = 1;
+    const ZOOM_STEP = 0.2;
+    const MAX_SCALE = 5;
+    const MIN_SCALE = 0.5;
 
     // New UI Elements
     const universalToggle = document.getElementById('universal-toggle');
@@ -748,8 +757,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     closeBtn.addEventListener('click', closeModal);
 
-    const closeViewer = () => viewerModal.classList.add('hidden');
+    const closeViewer = () => {
+        viewerModal.classList.add('hidden');
+        resetZoom();
+    };
     closeViewerBtn.addEventListener('click', closeViewer);
+
+    const updateZoom = () => {
+        viewerImg.style.transform = `scale(${viewerScale})`;
+        // If scaled up, allow image to overflow container for scrolling
+        if (viewerScale > 1) {
+            viewerImg.style.maxWidth = 'none';
+            viewerImg.style.maxHeight = 'none';
+        } else {
+            viewerImg.style.maxWidth = '100%';
+            viewerImg.style.maxHeight = '100%';
+        }
+    };
+
+    const resetZoom = () => {
+        viewerScale = 1;
+        updateZoom();
+    };
+
+    const changeZoom = (delta) => {
+        const newScale = viewerScale + delta;
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            viewerScale = newScale;
+            updateZoom();
+        }
+    };
+
+    zoomInBtn.addEventListener('click', () => changeZoom(ZOOM_STEP));
+    zoomOutBtn.addEventListener('click', () => changeZoom(-ZOOM_STEP));
+    zoomResetBtn.addEventListener('click', resetZoom);
+
+    zoomContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+        changeZoom(delta);
+    }, { passive: false });
 
     closeGroupBtn.addEventListener('click', () => groupModal.classList.add('hidden'));
 
