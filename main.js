@@ -764,8 +764,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeViewerBtn.addEventListener('click', closeViewer);
 
     const updateZoom = () => {
-        // Use width percentage for zooming to ensure proper scrolling
         const percent = Math.round(viewerScale * 100);
+        console.log(`[DEBUG] updateZoom: scale=${viewerScale}, percent=${percent}%`);
         viewerImg.style.width = `${percent}%`;
         viewerImg.style.maxWidth = 'none';
         viewerImg.style.maxHeight = 'none';
@@ -778,16 +778,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const changeZoom = (delta) => {
+        const oldScale = viewerScale;
         const newScale = viewerScale + delta;
+        console.log(`[DEBUG] changeZoom: delta=${delta}, old=${oldScale}, new=${newScale}`);
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             viewerScale = newScale;
             updateZoom();
+        } else {
+            console.warn(`[DEBUG] changeZoom: Scale limit reached (${newScale})`);
         }
     };
 
-    zoomInBtn.addEventListener('click', () => changeZoom(ZOOM_STEP));
-    zoomOutBtn.addEventListener('click', () => changeZoom(-ZOOM_STEP));
-    zoomResetBtn.addEventListener('click', resetZoom);
+    zoomInBtn.addEventListener('click', (e) => {
+        console.log('[DEBUG] Zoom In Button Clicked');
+        changeZoom(ZOOM_STEP);
+    });
+    zoomOutBtn.addEventListener('click', (e) => {
+        console.log('[DEBUG] Zoom Out Button Clicked');
+        changeZoom(-ZOOM_STEP);
+    });
+    zoomResetBtn.addEventListener('click', (e) => {
+        console.log('[DEBUG] Zoom Reset Button Clicked');
+        resetZoom();
+    });
 
     zoomContainer.addEventListener('wheel', (e) => {
         e.preventDefault();
