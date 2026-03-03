@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
     <!-- PWA Manifest (enables Add to Home Screen with no browser chrome) -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -47,7 +47,7 @@
                 <div class="universal-toggle-container">
                     <span>Universal</span>
                     <label class="switch">
-                        <input type="checkbox" id="universal-toggle">
+                        <input type="checkbox" id="universal-toggle" checked>
                         <span class="slider round"></span>
                     </label>
                 </div>
@@ -151,7 +151,7 @@
         </svg>
     </button>
 
-    <!-- Search Modal -->
+    <!-- Search / Add Insect Modal -->
     <div id="search-modal" class="modal hidden">
         <div class="modal-overlay"></div>
         <div class="modal-content glass">
@@ -159,22 +159,55 @@
                 <h2>Add New Insect</h2>
                 <button class="close-btn">&times;</button>
             </div>
-            <div class="search-box">
-                <input type="text" id="insect-search-input"
-                    placeholder="Search for an insect (e.g. Monarch Butterfly)...">
-                <button id="search-btn">Search</button>
+
+            <!-- Tab switcher -->
+            <div class="modal-tabs">
+                <button class="tab-btn active" data-tab="search">🔍 Search Web</button>
+                <button class="tab-btn" data-tab="upload">📷 From Gallery</button>
             </div>
-            <div id="search-results" class="results-grid">
-                <!-- Search results will appear here -->
-            </div>
-            <div id="selection-preview" class="hidden">
-                <div class="preview-container">
-                    <div id="selected-images-container" class="preview-images"></div>
-                    <div class="preview-info">
-                        <p id="selected-insect-name"></p>
-                        <button id="confirm-add-btn">Add to Album</button>
+
+            <!-- Tab 1: Web Search (existing) -->
+            <div id="search-tab" class="tab-panel">
+                <div class="search-box">
+                    <input type="text" id="insect-search-input"
+                        placeholder="Search for an insect (e.g. Monarch Butterfly)...">
+                    <button id="search-btn">Search</button>
+                </div>
+                <div id="search-results" class="results-grid">
+                    <!-- Search results will appear here -->
+                </div>
+                <div id="selection-preview" class="hidden">
+                    <div class="preview-container">
+                        <div id="selected-images-container" class="preview-images"></div>
+                        <div class="preview-info">
+                            <p id="selected-insect-name"></p>
+                            <button id="confirm-add-btn">Add to Album</button>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Tab 2: From Gallery (new) -->
+            <div id="upload-tab" class="tab-panel hidden">
+                <!-- Photo picker -->
+                <div class="upload-area" id="insect-photo-upload-area">
+                    <span class="upload-icon">📷</span>
+                    <p>Tap to choose a photo from your gallery</p>
+                    <input type="file" id="insect-photo-input" accept="image/*" hidden>
+                </div>
+                <!-- Preview of chosen photo -->
+                <img id="upload-preview-img" class="upload-preview-img hidden" alt="Preview">
+                <!-- Insect name input -->
+                <div class="upload-name-row">
+                    <div class="input-group">
+                        <label for="upload-insect-name">Insect Name</label>
+                        <input type="text" id="upload-insect-name" placeholder="e.g. Monarch Butterfly">
+                    </div>
+                    <button id="confirm-upload-btn" class="primary-btn" disabled>
+                        Add to Album
+                    </button>
+                </div>
+                <p id="upload-status" class="upload-status-msg hidden"></p>
             </div>
         </div>
     </div>
@@ -192,7 +225,7 @@
     </div>
 
     <script src="config.js?v=14"></script>
-    <script src="main.js?v=18"></script>
+    <script src="main.js?v=19"></script>
 
     <!-- Photo Viewer Modal -->
     <div id="viewer-modal" class="modal hidden">

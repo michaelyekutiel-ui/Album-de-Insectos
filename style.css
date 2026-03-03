@@ -1169,3 +1169,118 @@ input[type="text"]:focus {
     }
     #fullscreen-btn:active { background: rgba(74, 222, 128, 0.3); }
 }
+
+/* =============================================
+   MODAL TABS (Search Web / From Gallery)
+   ============================================= */
+.modal-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 1rem;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(255,255,255,0.5);
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-panel { display: block; }
+.tab-panel.hidden { display: none; }
+
+/* =============================================
+   GALLERY UPLOAD PANEL
+   ============================================= */
+.upload-area {
+    border: 2px dashed var(--glass-border);
+    border-radius: 1rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.upload-area:hover {
+    border-color: var(--accent);
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+}
+
+.upload-area p {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.upload-preview-img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    background: rgba(0,0,0,0.3);
+}
+
+.upload-name-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.upload-name-row .input-group {
+    flex: 1;
+}
+
+.upload-name-row .input-group label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.7);
+}
+
+.upload-name-row input[type=text] {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--glass-border);
+    border-radius: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.upload-name-row input[type=text]::placeholder {
+    color: rgba(255,255,255,0.3);
+}
+
+.upload-name-row .primary-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.upload-status-msg {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-align: center;
+}

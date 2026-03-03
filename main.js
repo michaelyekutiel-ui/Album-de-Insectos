@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Album de Insectos - Core Logic
  */
 
@@ -156,6 +156,28 @@ class SupabaseService {
             .eq('id', id);
 
         if (error) console.error('Error deleting insect:', error);
+    }
+
+    async uploadInsectPhoto(userId, file) {
+        if (!this.client) return null;
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`;
+
+        const { error: uploadError } = await this.client.storage
+            .from('insect-photos')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            console.error('Error uploading insect photo:', uploadError);
+            return null;
+        }
+
+        const { data: { publicUrl } } = this.client.storage
+            .from('insect-photos')
+            .getPublicUrl(filePath);
+
+        return publicUrl;
     }
 }
 
@@ -481,6 +503,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const db = new SupabaseService();
     const albumManager = new AlbumManager(db);
+    window._albumManager = albumManager; // expose for gallery upload
     const searchService = new iNaturalistSearch();
 
     // UI Elements
@@ -561,7 +584,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             userInfo.classList.remove('hidden');
             if (frameSettingsBtn) frameSettingsBtn.classList.remove('hidden');
             userEmail.textContent = user.email;
-            albumManager.setUser(user);
+            // Default to universal mode when logged in
+            universalToggle.checked = true;
+            albumManager.setUser(user).then(() => albumManager.setUniversalMode(true));
         } else {
             authBtn.classList.remove('hidden');
             userInfo.classList.add('hidden');
@@ -832,7 +857,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             resultsGrid.innerHTML = `
                 <div class="no-results">
                     <p>No images found for "${query}".</p>
-                    <p class="search-tip">💡 <strong>Tip:</strong> Try searching for the <strong>scientific name</strong> (e.g., <em>"Pseudosphinx"</em> instead of <em>"Pseudoesfinge"</em>) for better results on Wikimedia.</p>
+                    <p class="search-tip">ðŸ’¡ <strong>Tip:</strong> Try searching for the <strong>scientific name</strong> (e.g., <em>"Pseudosphinx"</em> instead of <em>"Pseudoesfinge"</em>) for better results on Wikimedia.</p>
                 </div>
             `;
             return;
@@ -900,3 +925,118 @@ if (fullscreenBtn) {
         }
     });
 }
+
+// =============================================
+// GALLERY UPLOAD — Tab switching + file upload
+// =============================================
+(function setupGalleryUpload() {
+    const tabBtns      = document.querySelectorAll('.tab-btn');
+    const searchTab    = document.getElementById('search-tab');
+    const uploadTab    = document.getElementById('upload-tab');
+    const uploadArea   = document.getElementById('insect-photo-upload-area');
+    const photoInput   = document.getElementById('insect-photo-input');
+    const previewImg   = document.getElementById('upload-preview-img');
+    const nameInput    = document.getElementById('upload-insect-name');
+    const confirmBtn   = document.getElementById('confirm-upload-btn');
+    const statusMsg    = document.getElementById('upload-status');
+
+    let selectedFile = null;
+
+    // --- Tab switching ---
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            searchTab.classList.toggle('hidden', tab !== 'search');
+            uploadTab.classList.toggle('hidden', tab !== 'upload');
+        });
+    });
+
+    // --- Reset upload panel whenever the modal opens ---
+    const searchModal = document.getElementById('search-modal');
+    const observer = new MutationObserver(() => {
+        if (!searchModal.classList.contains('hidden')) return;
+        // modal closed — reset upload tab
+        selectedFile = null;
+        photoInput.value = '';
+        previewImg.src = '';
+        previewImg.classList.add('hidden');
+        nameInput.value = '';
+        confirmBtn.disabled = true;
+        if (statusMsg) { statusMsg.textContent = ''; statusMsg.classList.add('hidden'); }
+    });
+    observer.observe(searchModal, { attributes: true, attributeFilter: ['class'] });
+
+    // --- Open file picker when upload area is tapped ---
+    uploadArea.addEventListener('click', () => photoInput.click());
+
+    // --- Show preview when a file is chosen ---
+    photoInput.addEventListener('change', () => {
+        const file = photoInput.files[0];
+        if (!file) return;
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+            previewImg.src = e.target.result;
+            previewImg.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+        updateConfirmState();
+    });
+
+    // --- Enable confirm button only when both photo and name are provided ---
+    nameInput.addEventListener('input', updateConfirmState);
+    function updateConfirmState() {
+        confirmBtn.disabled = !(selectedFile && nameInput.value.trim());
+    }
+
+    // --- Add to album ---
+    confirmBtn.addEventListener('click', async () => {
+        if (!selectedFile || !nameInput.value.trim()) return;
+
+        const name = nameInput.value.trim();
+        confirmBtn.disabled = true;
+        showStatus('Saving…');
+
+        try {
+            let imageUrl;
+            const mgr = window._albumManager; // set below
+
+            if (mgr && mgr.currentUser && mgr.db.client) {
+                // Logged in ? upload to Supabase Storage
+                imageUrl = await mgr.db.uploadInsectPhoto(mgr.currentUser.id, selectedFile);
+                if (!imageUrl) throw new Error('Upload failed');
+            } else {
+                // Logged out ? use base64 data URL (stored in localStorage)
+                imageUrl = await fileToDataUrl(selectedFile);
+            }
+
+            await mgr.addInsects([{ name, imageUrl }]);
+            showStatus('Added! ?');
+            // Close modal after short delay
+            setTimeout(() => {
+                searchModal.classList.add('hidden');
+            }, 800);
+        } catch (err) {
+            console.error(err);
+            showStatus('Error: ' + err.message);
+            confirmBtn.disabled = false;
+        }
+    });
+
+    function showStatus(msg) {
+        if (!statusMsg) return;
+        statusMsg.textContent = msg;
+        statusMsg.classList.remove('hidden');
+    }
+
+    function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload  = e => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+})();
