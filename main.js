@@ -555,14 +555,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function handleAuthStateChange(user) {
+        const frameSettingsBtn = document.getElementById('frame-settings-btn');
         if (user) {
             authBtn.classList.add('hidden');
             userInfo.classList.remove('hidden');
+            if (frameSettingsBtn) frameSettingsBtn.classList.remove('hidden');
             userEmail.textContent = user.email;
             albumManager.setUser(user);
         } else {
             authBtn.classList.remove('hidden');
             userInfo.classList.add('hidden');
+            if (frameSettingsBtn) frameSettingsBtn.classList.add('hidden');
             albumManager.setUser(null);
             universalToggle.checked = false;
             groupSpeciesToggle.checked = true;

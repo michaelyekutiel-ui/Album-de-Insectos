@@ -989,30 +989,35 @@ input[type="text"]:focus {
         gap: 0.15rem;
     }
 
-    /* Row 1 (top): user auth — right-aligned */
-    .header-row-user {
+    /* Row 1 (top): title */
+    .header-row-title {
         order: 1;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        font-size: 0.82rem;
     }
 
-    /* Row 2 (middle): toggles — centered with labels */
-    .header-row-toggles {
+    /* Row 2 (middle): username + logout */
+    .header-row-user {
         order: 2;
-        justify-content: center;
-        gap: 1.5rem;
+        justify-content: flex-start;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+        min-height: 1.5rem;
+        /* reserve space even when empty/logged-out */
+    }
+
+    /* Row 3 (bottom): three controls */
+    .header-row-controls {
+        order: 3;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 0.5rem;
     }
 
     /* Restore toggle labels on mobile */
     .universal-toggle-container span {
         display: inline;
         font-size: 0.82rem;
-    }
-
-    /* Row 3 (bottom): title */
-    .header-row-title {
-        order: 3;
     }
 
     h1 {
