@@ -1006,7 +1006,10 @@ if (fullscreenBtn) {
             if (mgr && mgr.currentUser && mgr.db.client) {
                 // Logged in ? upload to Supabase Storage
                 imageUrl = await mgr.db.uploadInsectPhoto(mgr.currentUser.id, selectedFile);
-                if (!imageUrl) throw new Error('Upload failed');
+                if (!imageUrl) {
+                    console.warn('Supabase upload failed, falling back to base64');
+                    imageUrl = await fileToDataUrl(selectedFile);
+                }
             } else {
                 // Logged out ? use base64 data URL (stored in localStorage)
                 imageUrl = await fileToDataUrl(selectedFile);
@@ -1040,3 +1043,4 @@ if (fullscreenBtn) {
         });
     }
 })();
+
