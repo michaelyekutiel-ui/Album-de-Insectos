@@ -888,3 +888,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 });
+
+// Fullscreen button
+const fullscreenBtn = document.getElementById('fullscreen-btn');
+if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
+        } else {
+            document.exitFullscreen();
+        }
+    });
+}

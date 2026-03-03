@@ -1105,9 +1105,21 @@ input[type="text"]:focus {
         max-height: 100dvh;
     }
 
+    /* Card is a flex column: photo fills all space, info bar at bottom */
     .insect-card {
         width: 55vh;
         height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Photo expands to fill remaining height â€” override global aspect-ratio:1 */
+    .insect-card img {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+        aspect-ratio: unset;
+        object-fit: cover;
     }
 
     /* Extra-compact card info in landscape */
@@ -1128,4 +1140,32 @@ input[type="text"]:focus {
         height: 30px;
         border-radius: 7px;
     }
+}
+/* Fullscreen button base — hidden outside of landscape */
+#fullscreen-btn {
+    display: none;
+    position: fixed;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 200;
+    border: none;
+    transition: background 0.2s;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+    #fullscreen-btn {
+        display: flex;
+        bottom: 1rem;
+        left: 1rem;
+        background: rgba(74, 222, 128, 0.12);
+        border: 1px solid rgba(74, 222, 128, 0.4);
+        color: #4ade80;
+        font-size: 1.3rem;
+        backdrop-filter: blur(8px);
+    }
+    #fullscreen-btn:active { background: rgba(74, 222, 128, 0.3); }
 }
