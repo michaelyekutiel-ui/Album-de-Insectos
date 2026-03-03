@@ -345,7 +345,7 @@ class AlbumManager {
 
             return `
                 <div class="insect-card ${this.isUniversalMode ? 'with-frame' : ''} ${isGroup ? 'is-group' : ''}" data-id="${insect.id}" data-name="${insect.name}">
-                    ${!this.isUniversalMode && !isGroup ? '<button class="delete-card-btn" aria-label="Delete insect">&times;</button>' : ''}
+                    ${!isGroup && this.currentUser && insect.userId === this.currentUser.id ? '<button class="delete-card-btn" aria-label="Delete insect">&times;</button>' : ''}
                     <div class="frame-wrapper" style="${frameStyle}">
                         <img src="${insect.imageUrl}" class="main-img" alt="${insect.name}" loading="lazy">
                         ${isGroup ? `<div class="group-badge">${insect.count}</div>` : ''}
@@ -1043,4 +1043,5 @@ if (fullscreenBtn) {
         });
     }
 })();
+
 
