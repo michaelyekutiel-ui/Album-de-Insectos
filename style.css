@@ -955,3 +955,81 @@ input[type="text"]:focus {
     background: none;
     backdrop-filter: none;
 }
+
+/* =============================================
+   MOBILE / SMALL SCREEN STYLES (≤ 768px)
+   ============================================= */
+@media (max-width: 768px) {
+
+    /* --- 1. HEADER: Stack toggles vertically --- */
+    .header-controls {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.4rem;
+    }
+
+    /* Hide text labels next to toggles to keep header compact */
+    .universal-toggle-container span {
+        display: none;
+    }
+
+    /* Stack the two toggle containers */
+    .universal-toggle-container {
+        gap: 0;
+    }
+
+    h1 {
+        font-size: 1.6rem;
+    }
+
+    /* --- 2. ALBUM GRID: Exactly 2 rows, horizontal scroll --- */
+    .album-grid {
+        display: grid;
+        /* Two fixed rows — fills the available height minus header/FABs */
+        grid-template-rows: repeat(2, calc(42vw + 90px));
+        /* Cards flow left→right into columns; new columns grow automatically */
+        grid-auto-flow: column;
+        /* Each column is the same width as one card */
+        grid-auto-columns: 42vw;
+        /* Scroll sideways when there are more columns than fit */
+        overflow-x: auto;
+        overflow-y: hidden;
+        /* Smooth momentum scrolling on iOS */
+        -webkit-overflow-scrolling: touch;
+        /* No vertical scroll on the main grid */
+        gap: 1rem;
+        padding: 1rem 1rem 5rem 1rem;
+        /* extra bottom padding clears FABs */
+        max-width: 100%;
+        /* Prevent the grid from being taller than the screen */
+        max-height: calc(100vh - 90px);
+    }
+
+    /* Ensure cards don't grow beyond their column */
+    .insect-card {
+        width: 42vw;
+        height: 100%;
+    }
+
+    /* Prevent native browser zoom/pan on the main scroll area */
+    .album-grid {
+        touch-action: pan-x pan-y;
+    }
+}
+
+/* --- 3. LANDSCAPE on mobile: narrow cards so 2 rows still fit --- */
+@media (orientation: landscape) and (max-height: 500px) {
+    .album-grid {
+        grid-template-rows: repeat(2, calc(28vh + 70px));
+        grid-auto-columns: calc(28vh + 20px);
+        max-height: calc(100vh - 70px);
+    }
+
+    .insect-card {
+        width: calc(28vh + 20px);
+    }
+
+    h1 {
+        font-size: 1.3rem;
+    }
+}
