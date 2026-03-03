@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -18,8 +18,22 @@
 
     <header class="glass">
         <div class="header-content">
-            <h1>Album de Insectos</h1>
-            <div class="header-controls">
+            <!-- Row 1 (top on mobile): User auth info -->
+            <div class="header-row-user">
+                <button id="auth-btn" class="glass-btn">Sign In</button>
+                <div id="user-info" class="hidden">
+                    <button id="frame-settings-btn" class="icon-btn" title="Frame Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                        </svg>
+                    </button>
+                    <span id="user-email"></span>
+                    <button id="logout-btn" class="text-btn">Logout</button>
+                </div>
+            </div>
+            <!-- Row 2 (middle on mobile): Toggle switches -->
+            <div class="header-row-toggles">
                 <div class="universal-toggle-container">
                     <span>Universal</span>
                     <label class="switch">
@@ -34,20 +48,10 @@
                         <span class="slider round"></span>
                     </label>
                 </div>
-                <div class="auth-controls">
-                    <button id="auth-btn" class="glass-btn">Sign In</button>
-                    <div id="user-info" class="hidden">
-                        <button id="frame-settings-btn" class="icon-btn" title="Frame Settings">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                            </svg>
-                        </button>
-                        <span id="user-email"></span>
-                        <button id="logout-btn" class="text-btn">Logout</button>
-                    </div>
-                </div>
+            </div>
+            <!-- Row 3 (bottom on mobile): App title -->
+            <div class="header-row-title">
+                <h1>Album de Insectos</h1>
             </div>
         </div>
     </header>
@@ -182,7 +186,7 @@
     </div>
 
     <script src="config.js?v=14"></script>
-    <script src="main.js?v=16"></script>
+    <script src="main.js?v=17"></script>
 
     <!-- Photo Viewer Modal -->
     <div id="viewer-modal" class="modal hidden">
