@@ -198,16 +198,20 @@ class AlbumManager {
     }
 
     updateAlbumUI() {
+        let globalAlbums = ['Main Album'];
+        if (this.album && this.album.length > 0) {
+            const insectAlbums = this.album.map(ins => ins.album).filter(Boolean);
+            globalAlbums = [...new Set(['Main Album', ...this.albums, ...insectAlbums])];
+        } else {
+            globalAlbums = [...new Set(['Main Album', ...this.albums])];
+        }
+
         const select = document.getElementById('album-select');
         if (!select) return;
-        select.innerHTML = this.albums.map(a => `<option value="${a}" ${a === this.currentAlbum ? 'selected' : ''}>${a}</option>`).join('');
+        select.innerHTML = globalAlbums.map(a => `<option value="${a}" ${a === this.currentAlbum ? 'selected' : ''}>${a}</option>`).join('');
 
         const container = document.getElementById('album-selector-container');
-        if (this.currentUser && !this.isUniversalMode) {
-            container.classList.remove('hidden');
-        } else {
-            container.classList.add('hidden');
-        }
+        container.classList.remove('hidden');
     }
 
     async setUser(user) {
@@ -246,21 +250,20 @@ class AlbumManager {
     }
 
     async refreshAlbum() {
-        if (this.currentUser) {
-            if (this.isUniversalMode) {
-                this.album = await this.db.getAllInsects();
-            } else {
+        if (this.isUniversalMode) {
+            this.album = await this.db.getAllInsects();
+        } else if (this.currentUser) {
+            this.album = await this.db.getInsects(this.currentUser.id);
+            // Check for local migration
+            const localData = JSON.parse(localStorage.getItem('insect-album')) || [];
+            if (localData.length > 0 && this.album.length === 0) {
+                await this.db.addInsects(localData, this.currentUser.id);
                 this.album = await this.db.getInsects(this.currentUser.id);
-                // Check for local migration
-                const localData = JSON.parse(localStorage.getItem('insect-album')) || [];
-                if (localData.length > 0 && this.album.length === 0) {
-                    await this.db.addInsects(localData, this.currentUser.id);
-                    this.album = await this.db.getInsects(this.currentUser.id);
-                }
             }
         } else {
             this.album = JSON.parse(localStorage.getItem('insect-album')) || [];
         }
+        this.updateAlbumUI();
         this.render();
     }
 
@@ -330,13 +333,11 @@ class AlbumManager {
     render() {
         let displayItems = this.album;
 
-        // Filter by album
-        if (!this.isUniversalMode) {
-            displayItems = displayItems.filter(ins => ins.album === this.currentAlbum || (!ins.album && this.currentAlbum === 'Main Album'));
-        }
+        // Filter by album globally
+        displayItems = displayItems.filter(ins => ins.album === this.currentAlbum || (!ins.album && this.currentAlbum === 'Main Album'));
 
         if (displayItems.length === 0) {
-            const msg = this.isUniversalMode ? "No insects found in the world yet." : "Your album is empty. Click the + button to add your first insect!";
+            const msg = this.isUniversalMode ? `No insects found in the world for "${this.currentAlbum}".` : `Your album "${this.currentAlbum}" is empty. Click the + button to add your first insect!`;
             this.gridElement.innerHTML = `
                 <div class="empty-state">
                     <p>${msg}</p>
