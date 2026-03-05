@@ -34,7 +34,8 @@ class SupabaseService {
             name: item.name,
             imageUrl: item.image_url,
             dateAdded: item.date_added,
-            userId: item.user_id
+            userId: item.user_id,
+            album: item.album || 'Main Album'
         }));
     }
 
@@ -59,7 +60,8 @@ class SupabaseService {
             userName: item.profiles?.username || 'Unknown User',
             frameType: item.profiles?.frame_type || 'color',
             frameValue: item.profiles?.frame_value || '#4ade80',
-            avatarUrl: item.profiles?.avatar_url
+            avatarUrl: item.profiles?.avatar_url,
+            album: item.album || 'Main Album'
         }));
     }
 
@@ -132,13 +134,14 @@ class SupabaseService {
         return publicUrl;
     }
 
-    async addInsects(insects, userId) {
+    async addInsects(insects, userId, albumName = 'Main Album') {
         if (!this.client) return;
         const toInsert = insects.map(ins => ({
             user_id: userId,
             name: ins.name,
             image_url: ins.imageUrl,
-            date_added: new Date().toISOString()
+            date_added: new Date().toISOString(),
+            album: ins.album || albumName
         }));
 
         const { error } = await this.client
@@ -190,6 +193,21 @@ class AlbumManager {
         this.userProfile = null;
         this.isUniversalMode = false;
         this.isGroupedMode = true;
+        this.currentAlbum = 'Main Album';
+        this.albums = ['Main Album'];
+    }
+
+    updateAlbumUI() {
+        const select = document.getElementById('album-select');
+        if (!select) return;
+        select.innerHTML = this.albums.map(a => `<option value="${a}" ${a === this.currentAlbum ? 'selected' : ''}>${a}</option>`).join('');
+
+        const container = document.getElementById('album-selector-container');
+        if (this.currentUser && !this.isUniversalMode) {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+        }
     }
 
     async setUser(user) {
@@ -201,10 +219,16 @@ class AlbumManager {
                 await this.db.updateProfile(user.id, { username: user.email.split('@')[0] });
                 this.userProfile = await this.db.getProfile(user.id);
             }
+            this.albums = this.userProfile.albums || ['Main Album'];
+            if (!this.albums.includes(this.currentAlbum)) this.currentAlbum = 'Main Album';
+            this.updateAlbumUI();
             await this.refreshAlbum();
         } else {
             this.userProfile = null;
             this.isUniversalMode = false;
+            this.currentAlbum = 'Main Album';
+            this.albums = ['Main Album'];
+            this.updateAlbumUI();
             this.album = JSON.parse(localStorage.getItem('insect-album')) || [];
             this.render();
         }
@@ -212,6 +236,7 @@ class AlbumManager {
 
     async setUniversalMode(enabled) {
         this.isUniversalMode = enabled;
+        this.updateAlbumUI();
         await this.refreshAlbum();
     }
 
@@ -245,7 +270,7 @@ class AlbumManager {
 
     async addInsects(insects) {
         if (this.currentUser) {
-            await this.db.addInsects(insects, this.currentUser.id);
+            await this.db.addInsects(insects, this.currentUser.id, this.currentAlbum);
             await this.refreshAlbum();
         } else {
             const newItems = insects.map(item => ({
@@ -303,7 +328,14 @@ class AlbumManager {
     }
 
     render() {
-        if (this.album.length === 0) {
+        let displayItems = this.album;
+
+        // Filter by album
+        if (!this.isUniversalMode) {
+            displayItems = displayItems.filter(ins => ins.album === this.currentAlbum || (!ins.album && this.currentAlbum === 'Main Album'));
+        }
+
+        if (displayItems.length === 0) {
             const msg = this.isUniversalMode ? "No insects found in the world yet." : "Your album is empty. Click the + button to add your first insect!";
             this.gridElement.innerHTML = `
                 <div class="empty-state">
@@ -313,10 +345,10 @@ class AlbumManager {
             return;
         }
 
-        let displayItems = this.album;
+        let toGroup = displayItems;
         if (this.isGroupedMode) {
             const groups = {};
-            this.album.forEach(insect => {
+            toGroup.forEach(insect => {
                 if (!groups[insect.name]) {
                     groups[insect.name] = {
                         ...insect,
@@ -668,6 +700,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         albumManager.setGroupedMode(e.target.checked);
     });
 
+    // Album Options Logic
+    const albumSelect = document.getElementById('album-select');
+    const createAlbumBtn = document.getElementById('create-album-btn');
+    const createAlbumModal = document.getElementById('create-album-modal');
+    const closeAlbumBtn = document.querySelector('.close-album-btn');
+    const confirmCreateAlbumBtn = document.getElementById('confirm-create-album-btn');
+    const newAlbumNameInput = document.getElementById('new-album-name');
+
+    albumSelect.addEventListener('change', (e) => {
+        albumManager.currentAlbum = e.target.value;
+        albumManager.render();
+    });
+
+    createAlbumBtn.addEventListener('click', () => {
+        newAlbumNameInput.value = '';
+        createAlbumModal.classList.remove('hidden');
+    });
+
+    closeAlbumBtn.addEventListener('click', () => {
+        createAlbumModal.classList.add('hidden');
+    });
+
+    confirmCreateAlbumBtn.addEventListener('click', async () => {
+        const name = newAlbumNameInput.value.trim();
+        if (!name) return;
+        if (!albumManager.albums.includes(name)) {
+            albumManager.albums.push(name);
+            albumManager.currentAlbum = name;
+            albumManager.updateAlbumUI();
+
+            if (albumManager.currentUser) {
+                await db.updateProfile(albumManager.currentUser.id, {
+                    albums: albumManager.albums
+                });
+            }
+        } else {
+            albumManager.currentAlbum = name;
+            albumManager.updateAlbumUI();
+        }
+        createAlbumModal.classList.add('hidden');
+        albumManager.render();
+    });
+
     // Framing Selection Logic
     frameSettingsBtn.addEventListener('click', () => {
         if (!albumManager.currentUser) {
@@ -915,30 +990,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Fullscreen button
-const fullscreenBtn = document.getElementById('fullscreen-btn');
-if (fullscreenBtn) {
-    fullscreenBtn.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
-        } else {
-            document.exitFullscreen();
-        }
-    });
-}
+// Fullscreen button - Attached globally to ensure it works even if DOMContentLoaded already fired
+(function setupFullscreen() {
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    if (fullscreenBtn) {
+        console.log('Fullscreen button found, attaching listener...');
+        fullscreenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                    .catch(err => console.error('Fullscreen enter error:', err));
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen()
+                        .catch(err => console.error('Fullscreen exit error:', err));
+                }
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            console.log('Fullscreen state:', !!document.fullscreenElement);
+        });
+    } else {
+        console.warn('Fullscreen button not found during setup.');
+    }
+})();
 
 // =============================================
 // GALLERY UPLOAD — Tab switching + file upload
 // =============================================
 (function setupGalleryUpload() {
-    const tabBtns      = document.querySelectorAll('.tab-btn');
-    const searchTab    = document.getElementById('search-tab');
-    const uploadTab    = document.getElementById('upload-tab');
-    const uploadArea   = document.getElementById('insect-photo-upload-area');
-    const photoInput   = document.getElementById('insect-photo-input');
-    const previewImg   = document.getElementById('upload-preview-img');
-    const nameInput    = document.getElementById('upload-insect-name');
-    const confirmBtn   = document.getElementById('confirm-upload-btn');
-    const statusMsg    = document.getElementById('upload-status');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const searchTab = document.getElementById('search-tab');
+    const uploadTab = document.getElementById('upload-tab');
+    const uploadArea = document.getElementById('insect-photo-upload-area');
+    const photoInput = document.getElementById('insect-photo-input');
+    const previewImg = document.getElementById('upload-preview-img');
+    const nameInput = document.getElementById('upload-insect-name');
+    const confirmBtn = document.getElementById('confirm-upload-btn');
+    const statusMsg = document.getElementById('upload-status');
 
     let selectedFile = null;
 
@@ -1037,7 +1127,7 @@ if (fullscreenBtn) {
     function fileToDataUrl(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload  = e => resolve(e.target.result);
+            reader.onload = e => resolve(e.target.result);
             reader.onerror = reject;
             reader.readAsDataURL(file);
         });
