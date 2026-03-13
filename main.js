@@ -349,6 +349,15 @@ class AlbumManager {
                     viewerImg.src = photo.imageUrl;
                     viewerName.textContent = photo.name;
                     viewerModal.dataset.currentPhotoId = photo.id;
+
+                    // Show/hide remove photo button based on ownership
+                    const removePhotoBtn = document.getElementById('remove-photo-btn');
+                    if (this.currentUser && photo.userId === this.currentUser.id || !this.currentUser) {
+                        removePhotoBtn.classList.remove('hidden');
+                    } else {
+                        removePhotoBtn.classList.add('hidden');
+                    }
+
                     viewerModal.classList.remove('hidden');
                 }
             };
