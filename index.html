@@ -237,7 +237,12 @@
         <div class="modal-overlay"></div>
         <div class="modal-content glass group-content">
             <button class="close-group-btn close-btn">&times;</button>
-            <h2 id="group-modal-title" class="modal-title"></h2>
+            <div class="group-header"
+                style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 1rem;">
+                <h2 id="group-modal-title" class="modal-title" style="margin: 0;"></h2>
+                <button id="remove-bug-btn" class="danger-btn hidden" title="Delete all photos of this insect"
+                    style="font-size: 0.8rem; padding: 4px 8px;">🗑️ Remove Bug</button>
+            </div>
             <div id="group-photo-grid" class="group-photo-grid">
                 <!-- Group photos will be injected here -->
             </div>
@@ -263,8 +268,11 @@
                 <button id="zoom-reset-btn" class="glass-btn" title="Reset Zoom">Reset</button>
                 <button id="zoom-in-btn" class="glass-btn icon-btn-small" title="Zoom In">+</button>
             </div>
-            <div class="viewer-footer">
-                <h2 id="viewer-name"></h2>
+            <div class="viewer-footer"
+                style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <h2 id="viewer-name" style="margin: 0;"></h2>
+                <button id="remove-photo-btn" class="danger-btn hidden" title="Delete this photo"
+                    style="font-size: 0.8rem; padding: 4px 8px;">🗑️ Remove Photo</button>
             </div>
         </div>
     </div>

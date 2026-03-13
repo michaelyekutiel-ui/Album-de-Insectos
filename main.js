@@ -299,6 +299,20 @@ class AlbumManager {
         }
     }
 
+    async deleteBugGroup(speciesName) {
+        const photosToDelete = this.album.filter(ins => ins.name === speciesName);
+        if (this.currentUser) {
+            for (const photo of photosToDelete) {
+                await this.db.deleteInsect(photo.id);
+            }
+            await this.refreshAlbum();
+        } else {
+            this.album = this.album.filter(ins => ins.name !== speciesName);
+            this.saveLocal();
+            this.render();
+        }
+    }
+
     openGroup(speciesName) {
         const photos = this.album.filter(ins => ins.name === speciesName);
         const modal = document.getElementById('group-modal');
@@ -312,6 +326,16 @@ class AlbumManager {
             </div>
         `).join('');
 
+        modal.dataset.currentGroupSpecies = speciesName;
+
+        // Show/hide remove bug button depending on auth or ownership
+        const removeBugBtn = document.getElementById('remove-bug-btn');
+        if (this.currentUser && photos.some(p => p.userId === this.currentUser.id) || !this.currentUser) {
+            removeBugBtn.classList.remove('hidden');
+        } else {
+            removeBugBtn.classList.add('hidden');
+        }
+
         modal.classList.remove('hidden');
 
         // Wire up clicks for photos inside the group
@@ -324,6 +348,7 @@ class AlbumManager {
                     const viewerName = document.getElementById('viewer-name');
                     viewerImg.src = photo.imageUrl;
                     viewerName.textContent = photo.name;
+                    viewerModal.dataset.currentPhotoId = photo.id;
                     viewerModal.classList.remove('hidden');
                 }
             };
@@ -867,6 +892,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     closeViewerBtn.addEventListener('click', closeViewer);
 
+    // Remove buttons logic
+    const removePhotoBtn = document.getElementById('remove-photo-btn');
+    const removeBugBtn = document.getElementById('remove-bug-btn');
+
+    removePhotoBtn.addEventListener('click', async () => {
+        const photoId = viewerModal.dataset.currentPhotoId;
+        const insectName = viewerName.textContent;
+        if (photoId && confirm(`Are you sure you want to remove this photo of "${insectName}"?`)) {
+            const id = isNaN(photoId) ? photoId : parseFloat(photoId);
+            await albumManager.deleteInsect(id);
+            closeViewer();
+            // If group modal is open, we should also refresh it or close it
+            if (!groupModal.classList.contains('hidden')) {
+                const currentSpecies = groupModal.dataset.currentGroupSpecies;
+                const remaining = albumManager.album.filter(ins => ins.name === currentSpecies);
+                if (remaining.length === 0) {
+                    groupModal.classList.add('hidden');
+                } else {
+                    albumManager.openGroup(currentSpecies);
+                }
+            }
+        }
+    });
+
+    removeBugBtn.addEventListener('click', async () => {
+        const speciesName = groupModal.dataset.currentGroupSpecies;
+        if (speciesName && confirm(`Are you sure you want to remove ALL photos of "${speciesName}"?`)) {
+            await albumManager.deleteBugGroup(speciesName);
+            groupModal.classList.add('hidden');
+        }
+    });
+
     const updateZoom = () => {
         const percent = Math.round(viewerScale * 100);
         viewerImg.style.width = `${percent}%`;
@@ -984,6 +1041,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 viewerImg.src = card.querySelector('img').src;
                 viewerName.textContent = card.querySelector('h3').textContent;
+                viewerModal.dataset.currentPhotoId = card.dataset.id;
+
+                // Show/hide remove photo button based on ownership
+                const removePhotoBtn = document.getElementById('remove-photo-btn');
+                const photo = albumManager.album.find(p => p.id == card.dataset.id);
+                if (photo && albumManager.currentUser && photo.userId === albumManager.currentUser.id || !albumManager.currentUser) {
+                    removePhotoBtn.classList.remove('hidden');
+                } else {
+                    removePhotoBtn.classList.add('hidden');
+                }
+
                 viewerModal.classList.remove('hidden');
             }
         }
