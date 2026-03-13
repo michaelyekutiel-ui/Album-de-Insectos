@@ -21,8 +21,14 @@ jobs:
           fi
           
           echo "Pinging Supabase to prevent pausing..."
-          curl -s -o /dev/null -w "%{http_code}" -X GET "${SUPABASE_URL}/rest/v1/insects?limit=1" \
-          -H "apikey: ${SUPABASE_ANON_KEY}" \
-          -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+          
+          # Remove trailing slash from URL if present
+          CLEAN_URL="${SUPABASE_URL%/}"
+          
+          # Run the request and print the response
+          curl -i -X GET "${CLEAN_URL}/rest/v1/insects?limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+            
           echo ""
           echo "Ping complete."
